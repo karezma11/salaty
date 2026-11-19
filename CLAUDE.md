@@ -16,12 +16,22 @@
 
 ## الوضع الحالي
 
-- **الإصدار 3.4** (versionCode 34)
+- **الإصدار 3.5** (versionCode 35)
 - حجم الـ APK ~٣٢١ ميجا
 - `minSdk 26`, `targetSdk/compileSdk 34`, Java، AGP 8.7.3، Gradle 8.9
-- ١٩ اختبار وحدة في `app/src/test/` (PrayerTimes, Hijri, Juz, Qibla) — **شغّلها بعد أي تعديل في الحسابات**
+- ٢٣ اختبار وحدة في `app/src/test/` (PrayerTimes, Hijri, Juz, Qibla, Updater) — **شغّلها بعد أي تعديل في الحسابات**
 
 ## بيئة العمل — مهم جدًا
+
+### لو Claude Code شغال على جهاز المستخدم نفسه (من ١٩ نوفمبر ٢٠٢٦)
+
+الفولدر `C:\Users\Yui\source\SalahApp` بقى مستودع git مربوط بـ `origin` ده، وفيه shell مباشر:
+- البناء: `JAVA_HOME=C:\Users\Yui\.jdks\jbr-21.0.11` (الـ jbr بتاع Android Studio إصدار 25 وGradle 8.9 بيقع بيه: «major version 69»)، وبعدين
+  `gradlew.bat :app:testDebugUnitTest -x fetchFonts -x fetchIbtihalat -x fetchAdhkarAudio -x fetchRadios --offline`
+- `lintDebug` محتاج مكتبات مش متخزّنة، فمش بيشتغل offline.
+- الـ commit محلي بس، والـ push بموافقة المستخدم.
+
+### لو شغال من الحاوية
 
 المشروع بيتبني على **جهاز ويندوز للمستخدم** عبر أدوات `mcp__remote-devices__`:
 - مجلد المشروع: `C:\Users\Yui\source\SalahApp`
@@ -54,9 +64,17 @@
 - فيه زرار **"فحص الإشعار الدائم"** في الإعدادات بيستدعي `Notifications.diagnose()` — بيقول إذا كان الإشعار مسجّل في النظام وبأي قالب. استخدمه بدل التخمين.
 - **الأداء:** `SuraActivity` بيبني النص في الخلفية بـ `PrecomputedTextCompat` (البقرة ٥٥ ألف حرف). التظليل بيعدّل الـ `Spannable` في مكانه — **متناديش `setText` تاني** وإلا هيعيد قياس السورة كل آية. و`QuranActivity` بيبني الـ١١٤ صف على دفعات.
 
+## فحص التحديثات (3.5)
+
+- **الإعدادات ← فحص التحديثات** (`SettingsActivity`، تحت «إصدار التطبيق»). مفيش أي اتصال بالنت غير لما المستخدم يضغط.
+- `Updater.java`: بيقرا `releases/latest` (أول asset بينتهي بـ `.apk`، والـ tag زي `v3.5` بيتقارن رقم رقم مع `versionName`)، وينزّل بـ `DownloadManager` في `getExternalFilesDir(Download)` («نزّل دلوقتي» أو «على الواي فاي بس»).
+- `UpdateReceiver` (`DOWNLOAD_COMPLETE`، بـ `goAsync` لأن فحص توقيع ٣٠٠ ميجا بياخد ثواني): بيتأكد من الحجم واسم الحزمة وإن `versionCode` أكبر وإن التوقيع نفس المفتاح، وبعدين إشعار «جاهز — اضغط للتثبيت» (قناة `updates`، إشعار رقم 80) عن طريق `FileProvider` (`external-files-path` اسمه `updates`).
+- النسخة المثبّتة debug أو بمفتاح مختلف: بيقول للمستخدم يعمل نسخة احتياطية، ويمسح التطبيق، وينزّل من صفحة GitHub، ويسترجع. التنزيل من جوه التطبيق مالوش لازمة هنا، لأن ملفات التطبيق بتتمسح معاه.
+- `BootReceiver` على `MY_PACKAGE_REPLACED` بيمسح الـ APK بعد التحديث.
+- **عشان يشتغل:** كل إصدار لازم يتنشر Release على GitHub (مش draft) بـ tag `vX.Y` = `versionName`، ومعاه `app-release.apk` (الخطوات في RELEASE.md).
+
 ## مش متعمل / مرفوض
 
-- **زرار "فحص التحديثات"** يقرا من `https://api.github.com/repos/karezma11/salaty/releases/latest` وينزّل الأحدث — ده الخطوة الجاية، المستخدم موافق عليها
 - تقسيم الصوتيات عشان التحديث يبقى أصغر (التطبيق ~١٨٠ ميجا + صوتيات تتنزّل)
 - تفسير ابن كثير (٥٩ ميجا) والبغوي (٣٠ ميجا) وصور صفحات المصحف — محتاجين استضافة
 - التجويد الملوّن — البيانات المفتوحة مش دقيقة كفاية

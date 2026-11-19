@@ -10,5 +10,9 @@ public class BootReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         Scheduler.scheduleAll(context);
         Notifications.updateTimes(context);
+        // بعد تثبيت تحديث: نمسح ملف الـ APK الكبير اللي اتنزّل
+        if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(intent.getAction())) {
+            Updater.afterUpdate(context);
+        }
     }
 }

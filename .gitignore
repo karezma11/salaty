@@ -10,3 +10,17 @@ app/build/
 local.properties
 /media/
 /quran-audio-64/
+/quran-audio/
+/audio-src/
+
+# بيتنزّلوا وقت البناء (fetchFonts) أو بتطلعهم مهام Gradle
+app/src/main/res/font/
+app/src/main/assets/FONT-LICENSE-OFL.txt
+/apk-check.txt
+/audio-done.txt
+/audio64-progress.txt
+/probe.txt
+/quality.txt
+
+# إعدادات Android Studio على الجهاز
+.idea/

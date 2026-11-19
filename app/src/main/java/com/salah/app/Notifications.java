@@ -16,6 +16,7 @@ public final class Notifications {
     // محتاج معرّف جديد — وإلا يفضل التطبيق شغال بإعدادات أول تثبيت
     public static final String CH_RECITATION = "recitation_v2";
     public static final String CH_TIMES = "times_v3";
+    public static final String CH_UPDATES = "updates";
 
     private static final int ID_TIMES = 5;
 
@@ -68,6 +69,10 @@ public final class Notifications {
         times.enableLights(false);
         times.setShowBadge(false);
         nm.createNotificationChannel(times);
+
+        NotificationChannel updates = new NotificationChannel(CH_UPDATES, "تحديثات التطبيق",
+                NotificationManager.IMPORTANCE_DEFAULT);
+        nm.createNotificationChannel(updates);
     }
 
     public static PendingIntent openApp(Context c) {

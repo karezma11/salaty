@@ -108,6 +108,8 @@ public class SettingsActivity extends BaseActivity {
         row("أصوات الأذان", "من مجموعة Athan-MP3 المفتوحة على GitHub", null);
         row("الابتهالات والتواشيح", "من أرشيف إنترنت — Public Domain Mark 1.0", null);
         row("إصدار التطبيق", versionLabel(), null);
+        updateValue = row("فحص التحديثات", updateLabel(), v -> onUpdateClick())
+                .findViewById(R.id.value);
         row("فحص الإشعار الدائم", "اضغط لمعرفة سبب عدم ظهوره", v ->
                 new AlertDialog.Builder(this)
                         .setTitle("فحص الإشعار")
@@ -135,7 +137,7 @@ public class SettingsActivity extends BaseActivity {
         return "كل " + Ui.arabicDigits(m / 60) + " ساعة";
     }
 
-    private void row(String label, String value, View.OnClickListener click) {
+    private View row(String label, String value, View.OnClickListener click) {
         View v = LayoutInflater.from(this).inflate(R.layout.item_setting, list, false);
         TextView l = v.findViewById(R.id.label);
         l.setText(label);
@@ -147,6 +149,7 @@ public class SettingsActivity extends BaseActivity {
             v.setClickable(false);
         }
         list.addView(v);
+        return v;
     }
 
     private void pickCity() {
@@ -516,5 +519,235 @@ public class SettingsActivity extends BaseActivity {
     protected void onResume() {
         super.onResume();
         render();
+        // لو إشعار انتهاء التنزيل ضاع، نتأكد بنفسنا (في الخلفية: فحص التوقيع تقيل)
+        if (Updater.state(this) == Updater.DOWNLOADING) {
+            android.content.Context app = getApplicationContext();
+            new Thread(() -> Updater.refresh(app)).start();
+        }
+        ticker.removeCallbacks(tick);
+        ticker.post(tick);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        ticker.removeCallbacks(tick);
+    }
+
+    // ===== فحص التحديثات =====
+
+    private TextView updateValue;
+    private final android.os.Handler ticker =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+
+    /** بيحدّث نسبة التنزيل في السطر كل ثانيتين طول ما الصفحة مفتوحة. */
+    private final Runnable tick = new Runnable() {
+        @Override
+        public void run() {
+            if (updateValue != null) updateValue.setText(updateLabel());
+            if (Updater.state(SettingsActivity.this) == Updater.DOWNLOADING) {
+                ticker.postDelayed(this, 2000);
+            }
+        }
+    };
+
+    private String updateLabel() {
+        String v = Updater.version(this);
+        switch (Updater.state(this)) {
+            case Updater.DOWNLOADING: {
+                int p = Updater.progress(this);
+                return "جاري تنزيل " + v + (p >= 0 ? " — " + Ui.arabicDigits(p) + "٪" : "");
+            }
+            case Updater.READY:
+                return "نسخة " + v + " جاهزة — اضغط للتثبيت";
+            case Updater.OTHER_KEY:
+                return "نسخة " + v + " محتاجة خطوة منك — اضغط";
+            case Updater.FAILED:
+                return "التنزيل ما كملش — اضغط للتفاصيل";
+            default:
+                return "اضغط عشان تشوف فيه نسخة أحدث (محتاج نت)";
+        }
+    }
+
+    private void onUpdateClick() {
+        switch (Updater.state(this)) {
+            case Updater.DOWNLOADING:
+                showDownloading();
+                break;
+            case Updater.READY:
+                install();
+                break;
+            case Updater.OTHER_KEY:
+                Updater.cancel(this);
+                showOtherKey();
+                render();
+                break;
+            case Updater.FAILED:
+                new AlertDialog.Builder(this)
+                        .setTitle("التنزيل ما كملش")
+                        .setMessage(Updater.error(this))
+                        .setPositiveButton("جرّب تاني", (d, w) -> {
+                            Updater.cancel(this);
+                            checkUpdate();
+                        })
+                        .setNegativeButton("إلغاء", (d, w) -> {
+                            Updater.cancel(this);
+                            render();
+                        })
+                        .show();
+                break;
+            default:
+                checkUpdate();
+        }
+    }
+
+    private void checkUpdate() {
+        Toast.makeText(this, "بيدوّر على نسخة أحدث…", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            Updater.Release found = null;
+            String err = null;
+            try {
+                found = Updater.fetchLatest();
+            } catch (Updater.Problem e) {
+                err = e.getMessage();
+            } catch (Exception e) {
+                err = "تعذّر الاتصال بـ GitHub. اتأكد إن النت شغال وجرّب تاني.";
+            }
+            final Updater.Release r = found;
+            final String error = err;
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (error != null) {
+                    new AlertDialog.Builder(this)
+                            .setTitle("فحص التحديثات")
+                            .setMessage(error)
+                            .setPositiveButton("تمام", null)
+                            .show();
+                } else {
+                    showRelease(r);
+                }
+            });
+        }).start();
+    }
+
+    private void showRelease(Updater.Release r) {
+        String installed = Updater.installedVersion(this);
+        if (!Updater.isNewer(r.version, installed)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("فحص التحديثات")
+                    .setMessage("عندك آخر نسخة (" + installed + ").")
+                    .setPositiveButton("تمام", null)
+                    .show();
+            return;
+        }
+        if (Updater.isDebugSigned(this)) {
+            showOtherKey();
+            return;
+        }
+        if (r.url == null) {
+            new AlertDialog.Builder(this)
+                    .setTitle("فيه نسخة جديدة: " + r.version)
+                    .setMessage("النسخة منشورة بس من غير ملف تثبيت لسه. جرّب كمان شوية.")
+                    .setPositiveButton("تمام", null)
+                    .show();
+            return;
+        }
+        StringBuilder msg = new StringBuilder();
+        msg.append("عندك ").append(installed).append("، والجديدة ").append(r.version).append('.');
+        if (r.size > 0) {
+            msg.append("\nحجم الملف: ").append(Ui.arabicDigits(r.size / 1048576)).append(" ميجا");
+        }
+        if (!r.notes.isEmpty()) msg.append("\n\n").append(r.notes);
+        msg.append("\n\nإعداداتك وعلاماتك وسجل صلواتك هيفضلوا زي ما هما.");
+        new AlertDialog.Builder(this)
+                .setTitle("فيه نسخة جديدة: " + r.version)
+                .setMessage(msg.toString())
+                .setPositiveButton("نزّل دلوقتي", (d, w) -> startDownload(r, false))
+                .setNeutralButton("على الواي فاي بس", (d, w) -> startDownload(r, true))
+                .setNegativeButton("مش دلوقتي", null)
+                .show();
+    }
+
+    private void startDownload(Updater.Release r, boolean wifiOnly) {
+        try {
+            Updater.download(this, r, wifiOnly);
+            Toast.makeText(this, wifiOnly
+                    ? "هيتنزّل أول ما تتوصل بالواي فاي، وهيظهر إشعار لما يخلص"
+                    : "بدأ التنزيل — هيظهر إشعار لما يخلص", Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "تعذّر بدء التنزيل", Toast.LENGTH_SHORT).show();
+        }
+        render();
+        ticker.removeCallbacks(tick);
+        ticker.post(tick);
+    }
+
+    private void showDownloading() {
+        int p = Updater.progress(this);
+        new AlertDialog.Builder(this)
+                .setTitle("جاري تنزيل " + Updater.version(this))
+                .setMessage((p >= 0 ? "خلص " + Ui.arabicDigits(p) + "٪. " : "")
+                        + "تقدر تقفل التطبيق، التنزيل هيكمّل وهيظهر إشعار لما يخلص.")
+                .setPositiveButton("تمام", null)
+                .setNegativeButton("إلغاء التنزيل", (d, w) -> {
+                    Updater.cancel(this);
+                    render();
+                })
+                .show();
+    }
+
+    private void install() {
+        java.io.File f = Updater.file(this);
+        if (f == null || !f.exists()) {
+            Updater.cancel(this);
+            render();
+            Toast.makeText(this, "ملف التحديث مش موجود، دوّر تاني", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (Updater.needsInstallPermission(this)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("اسمح بتثبيت التحديث")
+                    .setMessage("أندرويد محتاج تسمح لصلاتي تثبّت التحديث. هتفتحلك صفحة: فعّل "
+                            + "«السماح من هذا المصدر» وارجع اضغط على السطر تاني.")
+                    .setPositiveButton("افتح", (d, w) -> {
+                        try {
+                            startActivity(Updater.installPermissionIntent(this));
+                        } catch (Exception e) {
+                            Toast.makeText(this, "افتح إعدادات الموبايل ← التطبيقات ← صلاتي",
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    })
+                    .setNegativeButton("إلغاء", null)
+                    .show();
+            return;
+        }
+        try {
+            startActivity(Updater.installIntent(this, f));
+        } catch (Exception e) {
+            Toast.makeText(this, "تعذّر فتح المثبّت", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /** النسخة المثبّتة بمفتاح مختلف: لازم نسخة احتياطية ومسح وتثبيت من جديد. */
+    private void showOtherKey() {
+        new AlertDialog.Builder(this)
+                .setTitle("التحديث محتاج خطوة منك")
+                .setMessage("النسخة اللي على موبايلك موقّعة بمفتاح مختلف عن النسخة الرسمية "
+                        + "(غالبًا نسخة تجريبية)، فأندرويد مش هيركّب الجديدة فوقها.\n\n"
+                        + "١. اضغط «نسخة احتياطية» وابعت الملف لنفسك.\n"
+                        + "٢. نزّل النسخة الجديدة من صفحة GitHub.\n"
+                        + "٣. امسح صلاتي وثبّت الجديدة.\n"
+                        + "٤. من الإعدادات ← استرجاع نسخة.\n\n"
+                        + "ده بيحصل مرة واحدة بس، والتحديثات بعد كده هتتركّب من هنا عادي.")
+                .setPositiveButton("نسخة احتياطية", (d, w) -> doExport())
+                .setNeutralButton("صفحة التنزيل", (d, w) -> {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(Updater.PAGE)));
+                    } catch (Exception e) {
+                        Toast.makeText(this, Updater.PAGE, Toast.LENGTH_LONG).show();
+                    }
+                })
+                .setNegativeButton("إلغاء", null)
+                .show();
     }
 }
