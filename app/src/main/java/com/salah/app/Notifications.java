@@ -175,7 +175,7 @@ public final class Notifications {
             inbox.setSummaryText(Hijri.today(c).text());
 
             Notification.Builder b = new Notification.Builder(c, CH_TIMES)
-                    .setSmallIcon(R.drawable.ic_notification_times)
+                    .setSmallIcon(R.drawable.ic_notification)
                     .setColor(accent(c))
                     .setContentTitle(name + "  " + time)
                     .setContentText(when + "  ·  " + all)
@@ -194,7 +194,7 @@ public final class Notifications {
             } catch (Throwable e) {
                 // آخر خط دفاع: إشعار بسيط مضمون يظهر
                 post(c, nm, new Notification.Builder(c, CH_TIMES)
-                        .setSmallIcon(R.drawable.ic_notification_times)
+                        .setSmallIcon(R.drawable.ic_notification)
                         .setColor(accent(c))
                         .setContentTitle(name + "  " + time)
                         .setContentText(all.toString())
@@ -209,7 +209,7 @@ public final class Notifications {
             // بدل ما الإشعار يختفي من غير سبب، نعرض الخطأ نفسه
             try {
                 post(c, nm, new Notification.Builder(c, CH_TIMES)
-                        .setSmallIcon(R.drawable.ic_notification_times)
+                        .setSmallIcon(R.drawable.ic_notification)
                         .setContentTitle("تعذّر عرض المواقيت")
                         .setContentText(String.valueOf(e))
                         .setStyle(new Notification.BigTextStyle()
