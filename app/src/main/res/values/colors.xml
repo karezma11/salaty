@@ -17,7 +17,7 @@
     <color name="divider">#E6E3DC</color>
     <color name="highlight">#FFF3C4</color>
 
-    <color name="ic_launcher_background">#0B5D3B</color>
+    <color name="ic_launcher_background">#073D28</color>
 
     <!-- ألوان الإشعار: مختارة عشان تقرا على خلفية شريط الإشعارات في الوضعين -->
     <color name="notif_accent">#11805A</color>

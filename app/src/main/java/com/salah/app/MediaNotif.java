@@ -5,8 +5,8 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.RectF;
+
+
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
 import android.media.MediaMetadata;
@@ -88,7 +88,7 @@ final class MediaNotif {
 
         Notification.Builder b = new Notification.Builder(c, channel)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setColor(Notifications.accent(c))
+                .setColor(CARD_BG)
                 .setColorized(true)
                 .setLargeIcon(artwork)
                 .setContentTitle(title)
@@ -118,22 +118,29 @@ final class MediaNotif {
                 .build();
     }
 
-    /** صورة الكارت: مربع أخضر مدوّر وفي نصه هلال التطبيق أبيض. */
+    /**
+     * صورة الكارت (الشكل ج): أندرويد بيفرشها خلفية للكارت كله، فلازم تبقى هادية:
+     * أخضر غامق وهلال ذهبي باهت على جنب، عشان الكلام يفضل مقروء.
+     */
     static synchronized Bitmap artwork(Context c) {
         if (art != null) return art;
-        int size = 256;
-        Bitmap bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        int w = 512, h = 512;
+        Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
-        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        p.setColor(Notifications.accent(c));
-        canvas.drawRoundRect(new RectF(0, 0, size, size), 48, 48, p);
+        canvas.drawColor(CARD_BG);
         Drawable moon = c.getDrawable(R.drawable.ic_notification);
         if (moon != null) {
-            int pad = 56;
-            moon.setBounds(pad, pad, size - pad, size - pad);
+            moon = moon.mutate();
+            moon.setTint(GOLD);
+            moon.setAlpha(90); // باهت
+            // على الشمال، بعيد عن الكلام اللي على اليمين
+            moon.setBounds(20, 120, 300, 400);
             moon.draw(canvas);
         }
         art = bmp;
         return art;
     }
+
+    static final int CARD_BG = 0xFF085041;
+    static final int GOLD = 0xFFE2B04A;
 }
