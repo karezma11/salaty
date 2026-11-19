@@ -59,7 +59,7 @@ public class AdhanService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Action stopAction = new Notification.Action.Builder(null, "إيقاف", stopPi).build();
         return new Notification.Builder(this, Notifications.CH_ADHAN)
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(Notifications.smallIcon(this))
                 // لون غامق ثابت: مع setColorized أندرويد بيختار لون النص حسب
                 // الخلفية، والأخضر الفاتح كان بيخليه يختار نص غامق صعب القراءة
                 .setColor(androidx.core.content.ContextCompat.getColor(

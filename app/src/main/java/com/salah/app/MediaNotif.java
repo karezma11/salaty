@@ -87,7 +87,7 @@ final class MediaNotif {
                 .build());
 
         Notification.Builder b = new Notification.Builder(c, channel)
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(Notifications.smallIcon(c))
                 .setColor(CARD_BG)
                 .setColorized(true)
                 .setLargeIcon(artwork)

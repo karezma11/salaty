@@ -23,6 +23,18 @@ public final class Notifications {
     private Notifications() {
     }
 
+    /**
+     * أيقونة شريط الحالة (جنب الساعة). أندرويد العادي بيرسمها بلون واحد أبيض، فلازم
+     * الهلال الأبيض. موبايلات vivo/iQOO بتعرض الأيقونة بألوانها، فهناك بنحط نسخة
+     * من أيقونة التطبيق نفسها (هلال دهبي على أخضر) زي ما المستخدم طلب.
+     */
+    static int smallIcon(Context c) {
+        String m = android.os.Build.MANUFACTURER == null ? ""
+                : android.os.Build.MANUFACTURER.toLowerCase(java.util.Locale.ROOT);
+        return (m.contains("vivo") || m.contains("iqoo"))
+                ? R.drawable.ic_notification_color : R.drawable.ic_notification;
+    }
+
     /** لون التطبيق في الإشعارات. */
     static int accent(Context c) {
         try {
@@ -94,7 +106,7 @@ public final class Notifications {
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         if (nm == null) return;
         Notification n = new Notification.Builder(c, channel)
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(Notifications.smallIcon(c))
                 .setColor(accent(c))
                 .setContentTitle(title)
                 .setContentText(text)
@@ -111,7 +123,7 @@ public final class Notifications {
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         if (nm == null) return;
         Notification n = new Notification.Builder(c, channel)
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(Notifications.smallIcon(c))
                 .setColor(accent(c))
                 .setContentTitle(title)
                 .setContentText(text)
@@ -175,7 +187,7 @@ public final class Notifications {
             inbox.setSummaryText(Hijri.today(c).text());
 
             Notification.Builder b = new Notification.Builder(c, CH_TIMES)
-                    .setSmallIcon(R.drawable.ic_notification)
+                    .setSmallIcon(Notifications.smallIcon(c))
                     .setColor(accent(c))
                     .setContentTitle(name + "  " + time)
                     .setContentText(when + "  ·  " + TimesCard.hijriLine(c))
@@ -205,7 +217,7 @@ public final class Notifications {
             } catch (Throwable e) {
                 // آخر خط دفاع: إشعار بسيط مضمون يظهر
                 post(c, nm, new Notification.Builder(c, CH_TIMES)
-                        .setSmallIcon(R.drawable.ic_notification)
+                        .setSmallIcon(Notifications.smallIcon(c))
                         .setColor(accent(c))
                         .setContentTitle(name + "  " + time)
                         .setContentText(all.toString())
@@ -220,7 +232,7 @@ public final class Notifications {
             // بدل ما الإشعار يختفي من غير سبب، نعرض الخطأ نفسه
             try {
                 post(c, nm, new Notification.Builder(c, CH_TIMES)
-                        .setSmallIcon(R.drawable.ic_notification)
+                        .setSmallIcon(Notifications.smallIcon(c))
                         .setContentTitle("تعذّر عرض المواقيت")
                         .setContentText(String.valueOf(e))
                         .setStyle(new Notification.BigTextStyle()
