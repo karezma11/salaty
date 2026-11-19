@@ -178,7 +178,7 @@ public final class Notifications {
                     .setSmallIcon(R.drawable.ic_notification)
                     .setColor(accent(c))
                     .setContentTitle(name + "  " + time)
-                    .setContentText(when + "  ·  " + all)
+                    .setContentText(when + "  ·  " + TimesCard.hijriLine(c))
                     .setStyle(inbox)
                     .setContentIntent(openApp(c))
                     .setOngoing(true)
@@ -188,6 +188,17 @@ public final class Notifications {
                     .setShowWhen(true)
                     .setUsesChronometer(true)
                     .setChronometerCountDown(true);
+
+            // الشكل «س»: صورة بالتاريخ الهجري والصلوات برموزها ودعاء، لما الإشعار يتفتح.
+            // لو الرسم فشل لأي سبب بتفضل القائمة العادية.
+            try {
+                android.graphics.Bitmap card = TimesCard.render(c, t, idx);
+                b.setStyle(new Notification.BigPictureStyle()
+                        .bigPicture(card)
+                        .setBigContentTitle(name + "  " + time)
+                        .setSummaryText(when));
+            } catch (Throwable ignored) {
+            }
 
             try {
                 post(c, nm, b.build());
