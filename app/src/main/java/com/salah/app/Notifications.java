@@ -161,61 +161,33 @@ public final class Notifications {
             String name = PrayerTimes.NAMES[idx];
             String time = PrayerTimes.format(t[idx]);
 
-            // التصميم المخصص اختياري: لو فشل لأي سبب بنكمّل بالتصميم العادي
-            // بدل ما الإشعار يختفي خالص
-            android.widget.RemoteViews small = null;
-            android.widget.RemoteViews big = null;
-            try {
-                small = new android.widget.RemoteViews(
-                        c.getPackageName(), R.layout.notif_times_small);
-                small.setTextViewText(R.id.nName, name);
-                small.setTextViewText(R.id.nTime, time);
-                small.setChronometerCountDown(R.id.nLeft, true);
-                small.setChronometer(R.id.nLeft, base, "باقي %s", true);
-
-                big = new android.widget.RemoteViews(
-                        c.getPackageName(), R.layout.notif_times_big);
-                big.setTextViewText(R.id.nName, name);
-                big.setTextViewText(R.id.nTime, time);
-                big.setChronometerCountDown(R.id.nLeft, true);
-                big.setChronometer(R.id.nLeft, base, "باقي %s", true);
-                for (int i = 0; i < 6; i++) {
-                    big.setTextViewText(NAME_IDS[i], PrayerTimes.NAMES[i]);
-                    big.setTextViewText(TIME_IDS[i], PrayerTimes.format(t[i]));
-                    // نقطة صغيرة تحت الصلاة القادمة بدل تمييز صارخ
-                    big.setViewVisibility(DOT_IDS[i],
-                            i == idx ? android.view.View.VISIBLE : android.view.View.INVISIBLE);
-                }
-            } catch (Throwable e) {
-                small = null;
-                big = null;
-            }
-
-            // نص بديل للأجهزة أو الواجهات اللي مش بتعرض التصميم المخصص
+            // تصميم أندرويد العادي، من غير RemoteViews: على vivo (Funtouch 15) الإشعار
+            // بالتصميم المخصص كان بيتسجّل وبعدين واجهة النظام بتشيله ومابيظهرش خالص.
+            Notification.InboxStyle inbox = new Notification.InboxStyle()
+                    .setBigContentTitle("الصلاة القادمة: " + name + "  " + time);
             StringBuilder all = new StringBuilder();
             for (int i = 0; i < 6; i++) {
+                String line = PrayerTimes.NAMES[i] + "   " + PrayerTimes.format(t[i]);
+                inbox.addLine(i == idx ? "◂ " + line : "    " + line);
                 if (i > 0) all.append("   ");
                 all.append(PrayerTimes.NAMES[i]).append(' ').append(PrayerTimes.format(t[i]));
             }
+            inbox.setSummaryText(Hijri.today(c).text());
 
             Notification.Builder b = new Notification.Builder(c, CH_TIMES)
                     .setSmallIcon(R.drawable.ic_notification_times)
                     .setColor(accent(c))
-                    .setSubText(Hijri.today(c).text())
                     .setContentTitle(name + "  " + time)
                     .setContentText(when + "  ·  " + all)
+                    .setStyle(inbox)
                     .setContentIntent(openApp(c))
                     .setOngoing(true)
                     .setOnlyAlertOnce(true)
-                    .setShowWhen(false);
-
-            if (small != null && big != null) {
-                b.setCustomContentView(small)
-                        .setCustomBigContentView(big)
-                        .setStyle(new Notification.DecoratedCustomViewStyle());
-            } else {
-                b.setStyle(new Notification.BigTextStyle().bigText(all.toString()));
-            }
+                    // عدّاد تنازلي لحد الصلاة الجاية في رأس الإشعار، بيعدّ لوحده
+                    .setWhen(next[1])
+                    .setShowWhen(true)
+                    .setUsesChronometer(true)
+                    .setChronometerCountDown(true);
 
             try {
                 post(c, nm, b.build());
