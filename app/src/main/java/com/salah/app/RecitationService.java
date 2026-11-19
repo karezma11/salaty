@@ -21,6 +21,28 @@ public class RecitationService extends Service implements RecitationPlayer.Liste
     private static final int NOTIF_ID = 2;
 
     private String suraName = "";
+    private MediaNotif media;
+
+    // التحكم من شاشة القفل أو سماعة البلوتوث بيعدّي بنفس طريق أزرار الإشعار
+    private final MediaNotif.Controls controls = new MediaNotif.Controls() {
+        @Override
+        public void toggle() {
+            startService(new Intent(RecitationService.this, RecitationService.class)
+                    .setAction(ACTION_TOGGLE));
+        }
+
+        @Override
+        public void next() {
+            startService(new Intent(RecitationService.this, RecitationService.class)
+                    .setAction(ACTION_NEXT));
+        }
+
+        @Override
+        public void stop() {
+            startService(new Intent(RecitationService.this, RecitationService.class)
+                    .setAction(ACTION_STOP));
+        }
+    };
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -79,30 +101,15 @@ public class RecitationService extends Service implements RecitationPlayer.Liste
 
     private Notification build() {
         Notifications.ensureChannels(this);
-        boolean playing = RecitationPlayer.isPlaying();
-        Notification.Action toggle = new Notification.Action.Builder(null,
-                playing ? "إيقاف مؤقت" : "تشغيل", self(ACTION_TOGGLE, 21)).build();
-        Notification.Action next = new Notification.Action.Builder(null,
-                "الآية التالية", self(ACTION_NEXT, 22)).build();
-        Notification.Action stop = new Notification.Action.Builder(null,
-                "إنهاء", self(ACTION_STOP, 23)).build();
-
-        return new Notification.Builder(this, Notifications.CH_RECITATION)
-                .setSmallIcon(R.drawable.ic_notification_play)
-                .setColor(Notifications.accent(this))
-                .setSubText("تلاوة")
-                .setContentTitle("سورة " + name())
-                .setContentText("الآية " + Ui.arabicDigits(RecitationPlayer.currentAyah())
+        if (media == null) media = new MediaNotif(this, "salaty-recitation", controls);
+        return media.build(this, Notifications.CH_RECITATION,
+                "سورة " + name(),
+                "الآية " + Ui.arabicDigits(RecitationPlayer.currentAyah())
                         + " من " + Ui.arabicDigits(RecitationPlayer.lastAyah())
-                        + " · " + Reciters.current(this).name)
-                .setContentIntent(Notifications.openSura(this, RecitationPlayer.currentSura()))
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .setOnlyAlertOnce(true)
-                .setOngoing(true)
-                .addAction(toggle)
-                .addAction(next)
-                .addAction(stop)
-                .build();
+                        + " · " + Reciters.current(this).name,
+                RecitationPlayer.isPlaying(),
+                Notifications.openSura(this, RecitationPlayer.currentSura()),
+                self(ACTION_TOGGLE, 21), self(ACTION_NEXT, 22), self(ACTION_STOP, 23));
     }
 
     private void update() {
@@ -129,6 +136,7 @@ public class RecitationService extends Service implements RecitationPlayer.Liste
     @Override
     public void onDestroy() {
         RecitationPlayer.setWatcher(null);
+        if (media != null) media.release();
         super.onDestroy();
     }
 }

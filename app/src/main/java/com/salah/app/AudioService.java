@@ -18,6 +18,27 @@ public class AudioService extends Service implements Audio.Listener {
 
     private static final int NOTIF_ID = 7;
 
+    private MediaNotif media;
+
+    // التحكم من شاشة القفل أو سماعة البلوتوث بيعدّي بنفس طريق أزرار الإشعار
+    private final MediaNotif.Controls controls = new MediaNotif.Controls() {
+        @Override
+        public void toggle() {
+            startService(new Intent(AudioService.this, AudioService.class)
+                    .setAction(ACTION_TOGGLE));
+        }
+
+        @Override
+        public void next() {
+        }
+
+        @Override
+        public void stop() {
+            startService(new Intent(AudioService.this, AudioService.class)
+                    .setAction(ACTION_STOP));
+        }
+    };
+
     @Override
     public IBinder onBind(Intent intent) {
         return null;
@@ -58,21 +79,11 @@ public class AudioService extends Service implements Audio.Listener {
 
     private Notification build() {
         Notifications.ensureChannels(this);
-        boolean playing = Audio.isPlaying();
-        return new Notification.Builder(this, Notifications.CH_RECITATION)
-                .setSmallIcon(R.drawable.ic_notification_play)
-                .setColor(Notifications.accent(this))
-                .setContentTitle(Audio.title().isEmpty() ? "صلاتي" : Audio.title())
-                .setContentText(Audio.subtitle())
-                .setContentIntent(Notifications.openApp(this))
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .setOnlyAlertOnce(true)
-                .setOngoing(true)
-                .addAction(new Notification.Action.Builder(null,
-                        playing ? "إيقاف مؤقت" : "تشغيل", self(ACTION_TOGGLE, 51)).build())
-                .addAction(new Notification.Action.Builder(null,
-                        "إنهاء", self(ACTION_STOP, 52)).build())
-                .build();
+        if (media == null) media = new MediaNotif(this, "salaty-audio", controls);
+        return media.build(this, Notifications.CH_RECITATION,
+                Audio.title().isEmpty() ? "صلاتي" : Audio.title(), Audio.subtitle(),
+                Audio.isPlaying(), Notifications.openApp(this),
+                self(ACTION_TOGGLE, 51), null, self(ACTION_STOP, 52));
     }
 
     private void update() {
@@ -98,6 +109,7 @@ public class AudioService extends Service implements Audio.Listener {
     @Override
     public void onDestroy() {
         Audio.setWatcher(null);
+        if (media != null) media.release();
         super.onDestroy();
     }
 }
