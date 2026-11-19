@@ -135,7 +135,6 @@ public final class Notifications {
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         if (nm == null) return;
         if (!Prefs.persistentTimes(c)) {
-            TimesService.stop(c);
             nm.cancel(ID_TIMES);
             return;
         }
@@ -252,18 +251,15 @@ public final class Notifications {
         }
     }
 
-    /** آخر نسخة من إشعار المواقيت، عشان الخدمة تثبّتها. */
-    static volatile Notification lastTimes;
-
-    /** بيعرض الإشعار ويشغّل الخدمة اللي بتثبّته (عشان النظام مايمسحهوش ولا يقفل التطبيق). */
+    /**
+     * بيعرض إشعار المواقيت. أندرويد ١٤+ بيسيب الإشعار ده يتسحب أو يتمسح مع «مسح الكل»،
+     * فالـ deleteIntent بيرجّعه على طول (من غير خدمة foreground: 3.8 كانت بتقع بيها).
+     */
     private static void post(Context c, NotificationManager nm, Notification n) {
-        lastTimes = n;
+        n.deleteIntent = PendingIntent.getBroadcast(c, 13,
+                new Intent(c, TimesRepostReceiver.class),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         nm.notify(ID_TIMES, n);
-        TimesService.ensure(c);
-    }
-
-    static int timesId() {
-        return ID_TIMES;
     }
 
     /** تشخيص: بيقول إذا كان الإشعار اتسجّل فعلًا في النظام ولا لأ. */

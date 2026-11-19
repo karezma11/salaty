@@ -17,7 +17,6 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:name=".App"
@@ -118,15 +117,6 @@
             android:foregroundServiceType="dataSync" />
 
         <service
-            android:name=".TimesService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Persistent prayer times notification" />
-        </service>
-
-        <service
             android:name=".AudioService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
@@ -180,6 +170,10 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_times" />
         </receiver>
+
+        <receiver
+            android:name=".TimesRepostReceiver"
+            android:exported="false" />
 
         <receiver
             android:name=".UpdateReceiver"

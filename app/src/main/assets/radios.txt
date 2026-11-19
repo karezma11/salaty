@@ -1,0 +1,177 @@
+90001|إذاعة القرآن الكريم من القاهرة|https://radio.xecod.com/station/quran-cairo
+1|إبراهيم الأخضر|https://backup.qurango.net/radio/ibrahim_alakdar
+2|شيخ أبو بكر الشاطري|https://backup.qurango.net/radio/shaik_abu_bakr_al_shatri
+3|أحمد العجمي|https://backup.qurango.net/radio/ahmad_alajmy
+4|أحمد الحواشي|https://backup.qurango.net/radio/ahmad_alhawashi
+5|أحمد صابر|https://backup.qurango.net/radio/ahmad_saber
+6|أحمد نعينع|https://backup.qurango.net/radio/ahmad_nauina
+7|أكرم العلاقمي|https://backup.qurango.net/radio/akram_alalaqmi
+8|إدريس أبكر|https://backup.qurango.net/radio/idrees_abkr
+9|الزين محمد أحمد|https://backup.qurango.net/radio/alzain_mohammad_ahmad
+10|القارئ ياسين|https://backup.qurango.net/radio/alqaria_yassen
+11|العيون الكوشي|https://backup.qurango.net/radio/aloyoon_alkoshi
+12|توفيق الصايغ|https://backup.qurango.net/radio/tawfeeq_assayegh
+13|جمال شاكر عبدالله|https://backup.qurango.net/radio/jamal_shaker_abdullah
+14|خالد القحطاني|https://backup.qurango.net/radio/khaled_alqahtani
+15|خالد عبدالكافي|https://backup.qurango.net/radio/khalid_abdulkafi
+16|خليفة الطنيجي|https://backup.qurango.net/radio/khalifa_altunaiji
+17|سعد الغامدي|https://backup.qurango.net/radio/saad_alghamdi
+18|سعود الشريم|https://backup.qurango.net/radio/saud_alshuraim
+19|سهل ياسين|https://backup.qurango.net/radio/sahl_yassin
+20|زكي داغستاني|https://backup.qurango.net/radio/zaki_daghistani
+21|سيد رمضان|https://backup.qurango.net/radio/sayeed_ramadan
+22|شيرزاد عبدالرحمن طاهر|https://backup.qurango.net/radio/shirazad_taher
+23|صابر عبدالحكم|https://backup.qurango.net/radio/saber_abdulhakm
+24|صلاح البدير|https://backup.qurango.net/radio/salah_albudair
+25|صلاح الهاشم|https://backup.qurango.net/radio/salah_alhashim
+26|صلاح بو خاطر|https://backup.qurango.net/radio/slaah_bukhatir
+27|عادل ريان|https://backup.qurango.net/radio/adel_ryyan
+28|عبدالبارئ الثبيتي|https://backup.qurango.net/radio/abdelbari_altoubayti
+29|عبدالبارئ محمد|https://backup.qurango.net/radio/abdulbari_mohammad
+30|عبدالباسط عبدالصمد|https://backup.qurango.net/radio/abdulbasit_abdulsamad_mojawwad
+31|عبدالباسط عبدالصمد|https://backup.qurango.net/radio/abdulbasit_abdulsamad_warsh
+32|عبدالباسط عبدالصمد|https://backup.qurango.net/radio/abdulbasit_abdulsamad
+33|عبدالرحمن السديس|https://backup.qurango.net/radio/abdulrahman_alsudaes
+34|عبدالعزيز الأحمد|https://backup.qurango.net/radio/abdul_aziz_alahmad
+35|عبدالله المطرود|https://backup.qurango.net/radio/abdullah_almattrod
+36|عبدالله بصفر|https://backup.qurango.net/radio/abdullah_basfer
+37|عبدالله خياط|https://backup.qurango.net/radio/abdullah_khayyat
+38|عبدالله عواد الجهني|https://backup.qurango.net/radio/abdullah_aljohany
+39|عبدالرشيد صوفي|https://backup.qurango.net/radio/abdulrasheed_soufi_khalaf
+40|عبدالرشيد صوفي|https://backup.qurango.net/radio/abdulrasheed_soufi_assosi
+41|عبدالمحسن الحارثي|https://backup.qurango.net/radio/abdulmohsin_alharthy
+42|عبدالمحسن القاسم|https://backup.qurango.net/radio/abdulmohsen_alqasim
+43|عبدالمحسن العبيكان|https://backup.qurango.net/radio/abdulmohsin_alobaikan
+44|عبدالهادي أحمد كناكري|https://backup.qurango.net/radio/abdulhadi_kanakeri
+45|عبدالودود حنيف|https://backup.qurango.net/radio/abdulwadood_haneef
+46|علي بن عبدالرحمن الحذيفي|https://backup.qurango.net/radio/ali_alhuthaifi
+47|علي الحذيفي|https://backup.qurango.net/radio/ali_alhuthaifi_qalon
+48|علي جابر|https://backup.qurango.net/radio/ali_jaber
+49|علي حجاج السويسي|https://backup.qurango.net/radio/ali_hajjaj_alsouasi
+50|عماد زهير حافظ|https://backup.qurango.net/radio/emad_hafez
+51|عمر القزابري|https://backup.qurango.net/radio/omar_alqazabri
+52|فارس عباد|https://backup.qurango.net/radio/fares_abbad
+53|ناصر القطامي|https://backup.qurango.net/radio/nasser_alqatami
+54|نبيل الرفاعي|https://backup.qurango.net/radio/nabil_al_rifay
+55|نعمة الحسان|https://backup.qurango.net/radio/neamah_alhassan
+56|هاني الرفاعي|https://backup.qurango.net/radio/hani_arrifai
+57|وليد النائحي|https://backup.qurango.net/radio/waleed_alnaehi
+58|ياسر الدوسري|https://backup.qurango.net/radio/yasser_aldosari
+59|ياسر القرشي|https://backup.qurango.net/radio/yasser_alqurashi
+60|ياسر المزروعي|https://backup.qurango.net/radio/yasser_almazroyee
+61|يحيى حوا|https://backup.qurango.net/radio/yahya_hawwa
+62|يوسف الشويعي|https://backup.qurango.net/radio/yousef_alshoaey
+63|ماهر المعيقلي|https://backup.qurango.net/radio/maher
+64|محمد الطبلاوي|https://backup.qurango.net/radio/mohammad_altablaway
+65|محمد اللحيدان|https://backup.qurango.net/radio/mohammed_allohaidan
+66|محمد أيوب|https://backup.qurango.net/radio/mohammed_ayyub
+67|محمد صالح عالم شاه|https://backup.qurango.net/radio/mohammad_saleh_alim_shah
+68|محمد جبريل|https://backup.qurango.net/radio/mohammed_jibreel
+69|محمد صديق المنشاوي|https://backup.qurango.net/radio/mohammed_siddiq_alminshawi
+70|محمد صديق المنشاوي|https://backup.qurango.net/radio/mohammed_siddiq_alminshawi_mojawwad
+71|محمد عبدالكريم|https://backup.qurango.net/radio/mohammad_abdullkarem
+72|محمد عبدالحكيم سعيد العبدالله|https://backup.qurango.net/radio/mohammad_alabdullah_albizi
+73|محمد عبدالحكيم سعيد العبدالله|https://backup.qurango.net/radio/mohammad_alabdullah_aldorai
+74|محمود خليل الحصري|https://backup.qurango.net/radio/mahmoud_khalil_alhussary
+75|محمود خليل الحصري|https://backup.qurango.net/radio/mahmoud_khalil_alhussary_mojawwad
+76|محمود خليل الحصري|https://backup.qurango.net/radio/mahmoud_khalil_alhussary_warsh
+77|محمود علي البنا|https://backup.qurango.net/radio/mahmoud_ali__albanna
+78|محمود علي البنا|https://backup.qurango.net/radio/mahmoud_ali__albanna_mojawwad
+79|مشاري العفاسي|https://backup.qurango.net/radio/mishary_alafasi
+80|مصطفى إسماعيل|https://backup.qurango.net/radio/mustafa_ismail
+81|مصطفى اللاهوني|https://backup.qurango.net/radio/mustafa_allahoni
+82|مصطفى رعد العزاوي|https://backup.qurango.net/radio/mustafa_raad_alazawy
+83|مفتاح السلطني|https://backup.qurango.net/radio/muftah_alsaltany_aldori_an_abi_amr
+84|ماهر شخاشيرو|https://backup.qurango.net/radio/maher_shakhashero
+85|محمود الشيمي|https://backup.qurango.net/radio/mahmood_alsheimy
+86|خالد المهنا|https://backup.qurango.net/radio/khalid_almohana
+87|عادل الكلباني|https://backup.qurango.net/radio/adel_alkhalbany
+88|موسى بلال|https://backup.qurango.net/radio/mousa_bilal
+89|حاتم فريد الواعر|https://backup.qurango.net/radio/hatem_fareed_alwaer
+90|محمود الرفاعي|https://backup.qurango.net/radio/mahmood_al_rifai
+91|ابراهيم الدوسري|https://backup.qurango.net/radio/ibrahim_aldosari
+92|مفتاح السلطني|https://backup.qurango.net/radio/muftah_alsaltany_aldorai
+93|جمعان العصيمي|https://backup.qurango.net/radio/jamaan_alosaimi
+94|مفتاح السلطني|https://backup.qurango.net/radio/muftah_alsaltany
+95|يوسف بن نوح أحمد|https://backup.qurango.net/radio/yousef_bin_noah_ahmad
+96|مفتاح السلطني|https://backup.qurango.net/radio/muftah_alsaltany_ibn_thakwan_an_ibn_amr
+97|معيض الحارثي|https://backup.qurango.net/radio/moeedh_alharthi
+98|محمد رشاد الشريف|https://backup.qurango.net/radio/mohammad_rashad_alshareef
+99|أحمد خضر الطرابلسي|https://backup.qurango.net/radio/ahmad_khader_altarabulsi
+100|أحمد الطرابلسي|https://backup.qurango.net/radio/ahmed_altrabulsi
+101|عبدالله الكندري|https://backup.qurango.net/radio/abdullah_alkandari
+102|أحمد عامر|https://backup.qurango.net/radio/ahmed_amer
+103|محمد عثمان خان|https://backup.qurango.net/radio/mohammed_osman_khan
+104|الدوكالي محمد العالم|https://backup.qurango.net/radio/addokali_mohammad_alalim
+105|محمد عبدالكريم|https://backup.qurango.net/radio/mohammad_abdullkarem_alasbahani
+106|الفاتح محمد الزبير|https://backup.qurango.net/radio/alfateh_alzubair
+107|طارق عبدالغني دعوب|https://backup.qurango.net/radio/tareq_abdulgani_daawob
+108|العامة - متنوعة لمختلف القراء|https://backup.qurango.net/radio/mix
+109|تلاوات خاشعة-|https://backup.qurango.net/radio/salma
+110|تكبيرات العيد|https://backup.qurango.net/radio/eid
+111|عبدالرحمن الماجد|https://backup.qurango.net/radio/abdulrahman_almajed
+113|الفتاوى العامة|https://backup.qurango.net/radio/fatwa
+114|الرقية الشرعية|https://backup.qurango.net/radio/roqiah
+115|سورة البقرة - لعدد من القراء---|https://backup.qurango.net/radio/albaqarah
+116|تفسير القران الكريم--|https://backup.qurango.net/radio/tafseer
+117|خالد الجليل|https://backup.qurango.net/radio/khalid_aljileel
+118|ناصر الماجد|https://backup.qurango.net/radio/nasser_almajed
+119|هيثم الجدعاني|https://backup.qurango.net/radio/hitham_aljadani
+120|أحمد خليل شاهين|https://backup.qurango.net/radio/ahmad_shaheen
+121|عبدالله الموسى|https://backup.qurango.net/radio/abdullah_almousa
+122|عبدالله الخلف|https://backup.qurango.net/radio/abdullah_alkhalaf
+123|تراتيل قصيرة متميزة-|https://backup.qurango.net/radio/tarateel
+139|ماجد الزامل|https://backup.qurango.net/radio/majed_alzamel
+217|بندر بليلة|https://backup.qurango.net/radio/bandar_balilah
+248|ناصر العصفور|https://backup.qurango.net/radio/nasser_alosfor
+261|محمد أيوب - قراءة مميزة-|https://backup.qurango.net/radio/ayyoub2
+265|أحمد ديبان|https://backup.qurango.net/radio/ahmad_deban
+274|أذاعة محمد أبوسنينة|https://backup.qurango.net/radio/sneineh
+275|محمد الأمين قنيوة|https://backup.qurango.net/radio/qeniwa
+287|عبدالرحمن الشحات|https://backup.qurango.net/radio/a_alshahhat
+307|عبدالعزيز سحيم|https://backup.qurango.net/radio/a_sheim
+10902|آيات السكينة|https://backup.qurango.net/radio/sakeenah
+10903|صور من حياة الصحابة والتابعين رضوان الله عليهم---|https://backup.qurango.net/radio/sahabah
+10904|المختصر في تفسير القرآن الكريم|https://backup.qurango.net/radio/mukhtasartafsir
+10906|أذكار الصباح|https://backup.qurango.net/radio/athkar_sabah
+10907|أذكار المساء|https://backup.qurango.net/radio/athkar_masa
+21114|في ظلال السيرة النبوية - 400 حلقة عن سيرة نبينا محمد صلى الله عليه وسلم|https://backup.qurango.net/radio/fi_zilal_alsiyra
+21115|المختصر في السيرة النبوية|https://backup.qurango.net/radio/almukhtasar_fi_alsiyra
+21116|كتاب الاختيارات الفقهية في مسائل العبادات والمعاملات|https://backup.qurango.net/radio/alaikhtiarat_alfiqhayh_bin_baz
+21117|تفسير القران الكريم-الخلاصة من تفسير الطبري|https://backup.qurango.net/radio/tabri
+109038|صالح الهبدان|https://backup.qurango.net/radio/saleh_alhabdan
+109039|ترجمة معاني القرآن باللغة الأوردية - عبدالباسط عبدالصمد|https://backup.qurango.net/radio/translation_quran_urdu_basit
+109040|ترجمة معاني القرآن باللغة الأسبانية|https://backup.qurango.net/radio/translation_quran_spanish_afs
+109041|ترجمة معاني القرآن باللغة الألبانية|https://backup.qurango.net/radio/translation_quran_albanian
+109042|ترجمة معاني القرآن باللغة الألمانية|https://backup.qurango.net/radio/translation_quran_german
+109043|ترجمة معاني القرآن باللغة الأمازيغية|https://backup.qurango.net/radio/translation_quran_tamazight
+109044|ترجمة معاني القرآن باللغة الأوردية|https://backup.qurango.net/radio/translation_quran_urdu_sds_shur
+109045|ترجمة معاني القرآن باللغة الأوردية|https://backup.qurango.net/radio/translation_quran_urdu_minsh
+109046|ترجمة معاني القرآن باللغة الإنجليزية|https://backup.qurango.net/radio/translation_quran_english_basit
+109047|ترجمة معاني القرآن باللغة الإنجليزية|https://backup.qurango.net/radio/translation_quran_english_bsfr
+109048|ترجمة معاني القرآن باللغة الإنجليزية -ترجمة والك-|https://backup.qurango.net/radio/translation_quran_english_walk_basit
+109049|ترجمة معاني القرآن باللغة البرتغالية|https://backup.qurango.net/radio/translation_quran_portuguese
+109050|ترجمة معاني القرآن باللغة البوسنية|https://backup.qurango.net/radio/translation_quran_bosnia
+109051|ترجمة معاني القرآن باللغة التركية|https://backup.qurango.net/radio/translation_quran_turkish
+109052|ترجمة معاني القرآن باللغة الروسية|https://backup.qurango.net/radio/translation_quran_Russia
+109053|ترجمة معاني القرآن باللغة الصينية|https://backup.qurango.net/radio/translation_quran_chinese
+109054|ترجمة معاني القرآن باللغة الفارسية|https://backup.qurango.net/radio/translation_quran_farsi
+109055|ترجمة معاني القرآن باللغة الفرنسية|https://backup.qurango.net/radio/translation_quran_french
+109056|ترجمة معاني القرآن باللغة الكردية|https://backup.qurango.net/radio/translation_quran_kurdish
+109057|ترجمة معاني القرآن باللغة الكورية|https://backup.qurango.net/radio/translation_quran_Korean
+109058|ترجمة معاني القرآن باللغة المجرية|https://backup.qurango.net/radio/translation_quran_hungarian
+109059|ترجمة معاني القرآن باللغة اليونانية|https://backup.qurango.net/radio/translation_quran_greek
+109060|سورة الملك|https://backup.qurango.net/radio/Surah_Al-Mulk
+109061|فضل شهر رمضان|https://backup.qurango.net/radio/ramadan
+109062|ترجمة معاني القرآن باللغة الهوسا|https://backup.qurango.net/radio/Translation_Quran_Hausa
+109066|صحيح مسلم|https://backup.qurango.net/radio/saheh-muslim
+109067|صحيح البخاري|https://backup.qurango.net/radio/saheh-bokharee
+109069|***قصص الأنبياء***|https://backup.qurango.net/radio/alanbiya
+109073|رياض الصالحين|https://backup.qurango.net/radio/riyad
+109074|عبدالله البعيجان|https://backup.qurango.net/radio/buajan
+109075|أحمد طالب بن حميد|https://backup.qurango.net/radio/a_binhameed
+109076|تفسير غريب القرآن|https://backup.qurango.net/radio/gareeb-quran
+109077|بدر التركي|https://backup.qurango.net/radio/bader
+109078|هزاع البلوشي|https://backup.qurango.net/radio/hazza
+109083|الشمائل المحمدية|https://backup.qurango.net/radio/shmaeel
+109084|نورين محمد صديق|https://backup.qurango.net/radio/nourin_siddig
