@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- الوضع الليلي: خلفيات داكنة ونص فاتح، مع الحفاظ على الهوية الخضراء -->
+    <color name="green_900">#04231A</color>
+    <color name="green_700">#1E9469</color>
+    <color name="green_500">#25A87A</color>
+    <color name="green_100">#133227</color>
+    <color name="gold">#D8BC6A</color>
+    <color name="gold_soft">#3A3222</color>
+    <color name="bg">#10120F</color>
+    <color name="surface">#1A1D19</color>
+    <color name="ink">#ECF1EC</color>
+    <color name="ink_soft">#A3B1A8</color>
+    <color name="divider">#2A2F29</color>
+    <color name="highlight">#4A4120</color>
+
+    <!-- ألوان الإشعار: مختارة عشان تقرا على خلفية شريط الإشعارات في الوضعين -->
+    <color name="notif_accent">#3FBF8F</color>
+    <color name="notif_divider">#33FFFFFF</color>
+
+    <!-- خلفية إشعار الأذان: غامقة ثابتة في الوضعين عشان أندرويد يختار نص أبيض -->
+    <color name="notif_adhan_bg">#07402A</color>
+</resources>

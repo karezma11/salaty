@@ -1,0 +1,12 @@
+# مفتاح التوقيع وكلمات السر — متترفعش مع المشروع أبدًا
+keystore.properties
+*.jks
+*.keystore
+
+# مخرجات البناء والصوتيات المحمّلة
+/build/
+app/build/
+.gradle/
+local.properties
+/media/
+/quran-audio-64/

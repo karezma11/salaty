@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/bottomNav"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:layoutDirection="rtl"
+    android:background="@color/surface"
+    android:elevation="12dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="10dp">
+
+    <LinearLayout
+        android:id="@+id/navHome"
+        style="@style/NavItem">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_home"
+            android:contentDescription="@null" />
+        <TextView style="@style/NavLabel" android:text="الرئيسية" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navQuran"
+        style="@style/NavItem">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_quran"
+            android:contentDescription="@null" />
+        <TextView style="@style/NavLabel" android:text="المصحف" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navAdhkar"
+        style="@style/NavItem">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_adhkar"
+            android:contentDescription="@null" />
+        <TextView style="@style/NavLabel" android:text="الأذكار" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navMore"
+        style="@style/NavItem">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_settings"
+            android:contentDescription="@null" />
+        <TextView style="@style/NavLabel" android:text="المزيد" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">صلاتي</string>
+    <string name="sc_adhkar">الأذكار</string>
+    <string name="sc_adhkar_long">أذكار الصباح والمساء</string>
+    <string name="sc_quran">المصحف</string>
+    <string name="sc_quran_long">فتح المصحف</string>
+    <string name="sc_qibla">القبلة</string>
+    <string name="sc_qibla_long">اتجاه القبلة</string>
+</resources>

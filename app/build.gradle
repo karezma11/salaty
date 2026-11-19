@@ -1,0 +1,433 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.salah.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.salah.app"
+        minSdk 26
+        targetSdk 34
+        versionCode 34
+        versionName "3.4"
+    }
+
+    signingConfigs {
+        release {
+            // لو فيه keystore.properties في جذر المشروع، نسخة release هتتوقّع أوتوماتيك
+            def props = new File(rootDir, 'keystore.properties')
+            if (props.exists()) {
+                def p = new Properties()
+                props.withInputStream { p.load(it) }
+                storeFile file(p.getProperty('storeFile'))
+                storePassword p.getProperty('storePassword')
+                keyAlias p.getProperty('keyAlias')
+                keyPassword p.getProperty('keyPassword')
+            }
+            enableV1Signing true
+            enableV2Signing true
+        }
+        debug {
+            // توقيع بالطريقتين القديمة والجديدة، لضمان التثبيت على كل الأجهزة
+            enableV1Signing true
+            enableV2Signing true
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            // التوقيع بيشتغل أوتوماتيك لو عملت keystore.properties
+            if (new File(rootDir, 'keystore.properties').exists()) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    androidResources {
+        noCompress 'mp3'
+    }
+
+    // الصوت بيتقري من مجلده مباشرة، من غير نسخة تانية جوه المشروع
+    sourceSets {
+        main {
+            assets.srcDirs += [new File(rootDir, 'media')]
+        }
+    }
+
+    buildFeatures {
+        viewBinding false
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.core:core:1.13.1'
+}
+
+/**
+ * تنزيل تلاوة المصحف إلى مجلد quran-audio بجوار المشروع.
+ * المصدر: mp3quran.net — عبد الباسط عبد الصمد (مرتل)، جودة 32 كيلوبت.
+ * بيتخطى أي ملف اتنزل قبل كده، فلو وقف بيكمل من مكانه.
+ */
+tasks.register('fetchRecitation') {
+    doLast {
+        def outDir = new File(rootDir, 'quran-audio')
+        outDir.mkdirs()
+        def base = 'https://server7.mp3quran.net/basit/'
+        long total = 0
+        int done = 0
+        for (int i = 1; i <= 114; i++) {
+            def name = String.format('%03d', i)
+            def target = new File(outDir, name + '.mp3')
+            if (target.exists() && target.length() > 10000) {
+                total += target.length(); done++
+                continue
+            }
+            def tmp = new File(outDir, name + '.part')
+            boolean ok = false
+            for (int attempt = 1; attempt <= 3 && !ok; attempt++) {
+                try {
+                    def conn = new URL(base + name + '.mp3').openConnection()
+                    conn.setConnectTimeout(30000)
+                    conn.setReadTimeout(180000)
+                    conn.setRequestProperty('User-Agent', 'Mozilla/5.0')
+                    tmp.withOutputStream { os ->
+                        conn.inputStream.withStream { input -> os << input }
+                    }
+                    if (tmp.length() > 10000) {
+                        target.delete(); tmp.renameTo(target); ok = true
+                    }
+                } catch (Exception e) {
+                    logger.lifecycle("retry ${name}: ${e.message}")
+                    Thread.sleep(3000)
+                }
+            }
+            if (!ok) throw new GradleException("failed to download sura ${name}")
+            total += target.length(); done++
+            logger.lifecycle("${done}/114 — ${(long)(total/1048576)} MB")
+        }
+        new File(rootDir, 'audio-done.txt').text = "files=${done} totalMB=${(long)(total/1048576)}"
+    }
+}
+
+// شغّل المهمة دي يدوياً لما تحتاج تعيد تنزيل التلاوة
+
+/**
+ * ينقل التلاوة (آية آية) إلى داخل التطبيق.
+ * Sync بيمسح أي ملفات قديمة في مجلد assets/audio، فالنسخة القديمة بتتشال لوحدها.
+ */
+/** يشيل نسخة الصوت القديمة من جوه المشروع — بقت مش مطلوبة. */
+tasks.register('cleanOldAudioAssets', Delete) {
+    delete new File(projectDir, 'src/main/assets/audio')
+}
+
+tasks.named('preBuild') { dependsOn 'cleanOldAudioAssets' }
+
+/** فحص الـ APK بعد البناء: عدد ملفات الصوت وهل هي مخزّنة بدون ضغط. */
+tasks.register('verifyApk') {
+    doLast {
+        def apk = new File(projectDir, 'build/outputs/apk/debug/app-debug.apk')
+        def zf = new java.util.zip.ZipFile(apk)
+        int audio = 0, stored = 0, deflated = 0
+        long audioBytes = 0
+        def first = null
+        zf.entries().each { e ->
+            if (e.name.startsWith('assets/audio/')) {
+                audio++
+                audioBytes += e.size
+                if (e.method == java.util.zip.ZipEntry.STORED) stored++ else deflated++
+                if (first == null) first = e.name
+            }
+        }
+        int text = zf.entries().findAll { it.name.startsWith('assets/quran/') }.size()
+        zf.close()
+        def report = "apkMB=${(long)(apk.length()/1048576)}\naudioFiles=${audio}\nstored=${stored}\ndeflated=${deflated}\naudioMB=${(long)(audioBytes/1048576)}\nquranTextFiles=${text}\nfirst=${first}\n"
+        new File(rootDir, 'apk-check.txt').text = report
+        logger.lifecycle(report)
+    }
+}
+
+// شغّل verifyApk يدوياً وقت الحاجة
+
+/**
+ * تنزيل التلاوة آية آية بجودة 64 كيلوبت إلى مجلد quran-audio-64.
+ * المصدر: everyayah.com — عبد الباسط عبد الصمد (مرتل).
+ * بيتخطى اللي اتنزل، فلو وقف بيكمل من مكانه.
+ */
+tasks.register('fetchAyahAudio') {
+    doLast {
+        def outDir = new File(rootDir, 'quran-audio-64')
+        outDir.mkdirs()
+        def base = 'https://everyayah.com/data/Abdul_Basit_Murattal_64kbps/'
+        def progress = new File(rootDir, 'audio64-progress.txt')
+
+        // عدد آيات كل سورة من ملف الفهرس
+        def counts = [:]
+        new File(projectDir, 'src/main/assets/quran/suras.txt').eachLine('UTF-8') { line ->
+            def parts = line.split('\\|')
+            if (parts.length >= 3) counts[parts[0] as Integer] = parts[2] as Integer
+        }
+
+        def jobs = []
+        counts.each { sura, ayas ->
+            def dir = new File(outDir, String.format('%03d', sura))
+            dir.mkdirs()
+            for (int a = 1; a <= ayas; a++) {
+                def name = String.format('%03d%03d.mp3', sura, a)
+                def f = new File(dir, name)
+                if (!(f.exists() && f.length() > 1000)) jobs << [name, f]
+            }
+        }
+
+        def total = jobs.size()
+        def doneCount = new java.util.concurrent.atomic.AtomicInteger(0)
+        def failed = java.util.Collections.synchronizedList([])
+        def pool = java.util.concurrent.Executors.newFixedThreadPool(8)
+        logger.lifecycle("ayah files to download: ${total}")
+
+        jobs.each { job ->
+            pool.submit({
+                def name = job[0]
+                def target = job[1]
+                boolean ok = false
+                for (int attempt = 1; attempt <= 3 && !ok; attempt++) {
+                    try {
+                        def c = new URL(base + name).openConnection()
+                        c.setConnectTimeout(20000)
+                        c.setReadTimeout(60000)
+                        c.setRequestProperty('User-Agent', 'Mozilla/5.0')
+                        def tmp = new File(target.parentFile, name + '.part')
+                        tmp.withOutputStream { os -> c.inputStream.withStream { input -> os << input } }
+                        if (tmp.length() > 1000) { tmp.renameTo(target); ok = true } else { tmp.delete() }
+                    } catch (Exception e) {
+                        Thread.sleep(1500)
+                    }
+                }
+                if (!ok) failed << name
+                int n = doneCount.incrementAndGet()
+                if (n % 100 == 0 || n == total) {
+                    progress.text = "done=${n}/${total} failed=${failed.size()}"
+                }
+            } as Runnable)
+        }
+        pool.shutdown()
+        pool.awaitTermination(3, java.util.concurrent.TimeUnit.HOURS)
+
+        long bytes = 0
+        int files = 0
+        outDir.eachFileRecurse { f -> if (f.name.endsWith('.mp3')) { bytes += f.length(); files++ } }
+        def summary = "files=${files} totalMB=${(long)(bytes/1048576)} failed=${failed.size()} ${failed.take(10)}"
+        progress.text = summary
+        logger.lifecycle(summary)
+        if (!failed.isEmpty()) throw new GradleException("missing ${failed.size()} ayah files — run again to resume")
+    }
+}
+
+// شغّل fetchAyahAudio يدوياً لو احتجت تعيد التنزيل
+
+/** تنزيل خط أميري للمصحف (رخصة SIL OFL) مرة واحدة. */
+tasks.register('fetchFonts') {
+    doLast {
+        def dir = new File(projectDir, 'src/main/res/font')
+        dir.mkdirs()
+        def files = [
+            'amiri_quran.ttf' : 'https://mirrors.mit.edu/CTAN/fonts/amiri/AmiriQuran.ttf',
+            'amiri_regular.ttf': 'https://mirrors.mit.edu/CTAN/fonts/amiri/Amiri-Regular.ttf',
+            'amiri_bold.ttf'  : 'https://mirrors.mit.edu/CTAN/fonts/amiri/Amiri-Bold.ttf'
+        ]
+        def licence = new File(projectDir, 'src/main/assets/FONT-LICENSE-OFL.txt')
+        files.each { name, url ->
+            def target = new File(dir, name)
+            if (target.exists() && target.length() > 10000) return
+            try {
+                def c = new URL(url).openConnection()
+                c.setConnectTimeout(20000); c.setReadTimeout(60000)
+                c.setRequestProperty('User-Agent', 'Mozilla/5.0')
+                target.withOutputStream { os -> c.inputStream.withStream { i -> os << i } }
+                logger.lifecycle("font ${name}: ${target.length()} bytes")
+            } catch (Exception e) {
+                logger.lifecycle("font ${name} failed: ${e.message}")
+                target.delete()
+            }
+        }
+        if (!licence.exists()) {
+            try {
+                def c = new URL('https://mirrors.mit.edu/CTAN/fonts/amiri/OFL.txt').openConnection()
+                c.setConnectTimeout(20000); c.setReadTimeout(30000)
+                licence.withOutputStream { os -> c.inputStream.withStream { i -> os << i } }
+            } catch (Exception ignored) {
+            }
+        }
+    }
+}
+
+tasks.named('preBuild') { dependsOn 'fetchFonts' }
+
+/**
+ * ينزّل الابتهالات والتواشيح من أرشيف إنترنت (مادة مرفوعة برخصة Public Domain Mark 1.0)
+ * إلى مجلد media/ibtihalat، وبيتضم للتطبيق كأصول.
+ */
+tasks.register('fetchIbtihalat') {
+    doLast {
+        def id = '20240220_20240220_0219'
+        def wanted = ['006','011','012','017','022','026','030','037','038','039','040',
+                      '041','042','043','044','045','046','048','049','050','051','055','056']
+        def dir = new File(rootDir, 'media/ibtihalat')
+        dir.mkdirs()
+        def meta
+        try {
+            def c = new URL("https://archive.org/metadata/${id}").openConnection()
+            c.setConnectTimeout(20000); c.setReadTimeout(60000)
+            c.setRequestProperty('User-Agent', 'Mozilla/5.0')
+            meta = new groovy.json.JsonSlurper().parse(c.inputStream)
+        } catch (Exception e) {
+            logger.lifecycle("ibtihalat: تعذّر جلب الفهرس: ${e.message}")
+            return
+        }
+        def server = meta.server
+        def base = meta.dir
+        def done = 0, failed = 0
+        meta.files.each { f ->
+            def name = f.name as String
+            if (!name.toLowerCase().endsWith('.mp3')) return
+            def key = name.length() >= 3 ? name.substring(0, 3) : ''
+            if (!wanted.contains(key)) return
+            def target = new File(dir, "${key}.mp3")
+            def expected = f.size ? (f.size as String).toLong() : 0L
+            if (target.exists() && expected > 0 && target.length() == expected) { done++; return }
+            def encoded = java.net.URLEncoder.encode(name, 'UTF-8').replace('+', '%20')
+            def url = "https://${server}${base}/${encoded}"
+            try {
+                def c = new URL(url).openConnection()
+                c.setConnectTimeout(20000); c.setReadTimeout(180000)
+                c.setRequestProperty('User-Agent', 'Mozilla/5.0')
+                target.withOutputStream { os -> c.inputStream.withStream { i -> os << i } }
+                logger.lifecycle("ibtihal ${key}: ${target.length()} bytes")
+                done++
+            } catch (Exception e) {
+                logger.lifecycle("ibtihal ${key} failed: ${e.message}")
+                target.delete()
+                failed++
+            }
+        }
+        logger.lifecycle("ibtihalat: ${done} جاهزة، ${failed} فشلت")
+    }
+}
+tasks.named('preBuild') { dependsOn 'fetchIbtihalat' }
+
+/**
+ * ينزّل صوت الأذكار (287 ملف) من مستودع SalatTimes-Azkar المفتوح على GitHub
+ * إلى media/adhkar، وبيتضم للتطبيق كأصول.
+ */
+tasks.register('fetchAdhkarAudio') {
+    doLast {
+        def base = 'https://raw.githubusercontent.com/IslamAlorabI/SalatTimes-Azkar/main/Azkar-Audio/'
+        def dir = new File(rootDir, 'media/adhkar')
+        dir.mkdirs()
+        def have = 0, got = 0, failed = 0
+        (1..287).each { n ->
+            def name = String.format('%03d.mp3', n)
+            def target = new File(dir, name)
+            if (target.exists() && target.length() > 2000) { have++; return }
+            try {
+                def c = new URL(base + name).openConnection()
+                c.setConnectTimeout(20000); c.setReadTimeout(120000)
+                c.setRequestProperty('User-Agent', 'Mozilla/5.0')
+                def tmp = new File(dir, name + '.part')
+                tmp.withOutputStream { os -> c.inputStream.withStream { i -> os << i } }
+                if (tmp.length() > 2000) { tmp.renameTo(target); got++ }
+                else { tmp.delete(); failed++ }
+            } catch (Exception e) {
+                logger.lifecycle("adhkar ${name} failed: ${e.message}")
+                failed++
+            }
+        }
+        logger.lifecycle("adhkar audio: ${have} موجودة، ${got} اتحمّلت، ${failed} فشلت")
+    }
+}
+tasks.named('preBuild') { dependsOn 'fetchAdhkarAudio' }
+
+/** ينزّل قائمة إذاعات القرآن من mp3quran إلى assets/radios.txt */
+tasks.register('fetchRadios') {
+    doLast {
+        def out = new File(projectDir, 'src/main/assets/radios.txt')
+        out.parentFile.mkdirs()
+        try {
+            def c = new URL('https://mp3quran.net/api/v3/radios?language=ar').openConnection()
+            c.setConnectTimeout(20000); c.setReadTimeout(60000)
+            c.setRequestProperty('User-Agent', 'Mozilla/5.0')
+            def json = new groovy.json.JsonSlurper().parse(c.inputStream)
+            def lines = []
+            json.radios.each { r ->
+                def name = (r.name as String).replace('|', ' ').replaceAll('\\s+', ' ').trim()
+                def url = (r.url as String).trim()
+                if (name && url) lines << "${r.id}|${name}|${url}"
+            }
+            // بنجرّب أي رابط قبل ما نحطه: بنفتح الاتصال ونتأكد إن صوت فعلاً بيوصل
+            def works = { String u ->
+                try {
+                    def c2 = new URL(u).openConnection()
+                    c2.setInstanceFollowRedirects(true)
+                    c2.setConnectTimeout(12000); c2.setReadTimeout(12000)
+                    c2.setRequestProperty('User-Agent', 'Mozilla/5.0')
+                    c2.connect()
+                    def code = c2.getResponseCode()
+                    def type = String.valueOf(c2.getContentType())
+                    def stream = c2.getInputStream()
+                    def buf = new byte[2048]
+                    def got = stream.read(buf)
+                    stream.close()
+                    return code == 200 && got > 0 && type.toLowerCase().contains('audio')
+                } catch (Exception e) {
+                    return false
+                }
+            }
+
+            // إذاعة القرآن الكريم من القاهرة مش في قائمة mp3quran
+            def cairo = [
+                'https://radio.xecod.com/station/quran-cairo',
+                'https://stream.radiojar.com/8s5u5tpdtwzuv'
+            ]
+            def working = cairo.find { works(it) }
+            if (working != null) {
+                lines.add(0, "90001|إذاعة القرآن الكريم من القاهرة|${working}")
+                logger.lifecycle("radio القاهرة: شغّالة — ${working}")
+            } else {
+                logger.lifecycle("radio القاهرة: مفيش رابط شغّال النهاردة")
+            }
+
+            // نشيل أي إذاعة مضافة يدويًا بقت ميتة (زي القناة السعودية على radiojar)
+            def before = lines.size()
+            lines.removeAll { String line ->
+                def parts = line.split('\\|')
+                parts.length > 2 && parts[2].contains('radiojar') && !works(parts[2])
+            }
+            if (before != lines.size()) {
+                logger.lifecycle("radios: اتشال ${before - lines.size()} رابط ميت")
+            }
+
+            if (lines.size() > 20) {
+                out.setText(lines.join('\n') + '\n', 'UTF-8')
+                logger.lifecycle("radios: ${lines.size()} إذاعة")
+            } else {
+                logger.lifecycle("radios: الرد مش مكتمل، سايبين الملف القديم")
+            }
+        } catch (Exception e) {
+            logger.lifecycle("radios: تعذّر التحميل (${e.message}) — سايبين الملف القديم")
+            if (!out.exists()) out.setText('', 'UTF-8')
+        }
+    }
+}
+tasks.named('preBuild') { dependsOn 'fetchRadios' }
