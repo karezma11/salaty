@@ -75,6 +75,7 @@ public class MainActivity extends BaseActivity {
         setupBottomNav(R.id.navHome);
         buildTimesRow();
         buildActions();
+        CrashLog.showIfAny(this);
 
         if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
