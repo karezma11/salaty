@@ -135,6 +135,7 @@ public final class Notifications {
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         if (nm == null) return;
         if (!Prefs.persistentTimes(c)) {
+            TimesService.stop(c);
             nm.cancel(ID_TIMES);
             return;
         }
@@ -218,10 +219,10 @@ public final class Notifications {
             }
 
             try {
-                nm.notify(ID_TIMES, b.build());
+                post(c, nm, b.build());
             } catch (Throwable e) {
                 // آخر خط دفاع: إشعار بسيط مضمون يظهر
-                nm.notify(ID_TIMES, new Notification.Builder(c, CH_TIMES)
+                post(c, nm, new Notification.Builder(c, CH_TIMES)
                         .setSmallIcon(R.drawable.ic_notification_times)
                         .setColor(accent(c))
                         .setContentTitle(name + "  " + time)
@@ -236,7 +237,7 @@ public final class Notifications {
         } catch (Throwable e) {
             // بدل ما الإشعار يختفي من غير سبب، نعرض الخطأ نفسه
             try {
-                nm.notify(ID_TIMES, new Notification.Builder(c, CH_TIMES)
+                post(c, nm, new Notification.Builder(c, CH_TIMES)
                         .setSmallIcon(R.drawable.ic_notification_times)
                         .setContentTitle("تعذّر عرض المواقيت")
                         .setContentText(String.valueOf(e))
@@ -249,6 +250,20 @@ public final class Notifications {
             } catch (Throwable ignored) {
             }
         }
+    }
+
+    /** آخر نسخة من إشعار المواقيت، عشان الخدمة تثبّتها. */
+    static volatile Notification lastTimes;
+
+    /** بيعرض الإشعار ويشغّل الخدمة اللي بتثبّته (عشان النظام مايمسحهوش ولا يقفل التطبيق). */
+    private static void post(Context c, NotificationManager nm, Notification n) {
+        lastTimes = n;
+        nm.notify(ID_TIMES, n);
+        TimesService.ensure(c);
+    }
+
+    static int timesId() {
+        return ID_TIMES;
     }
 
     /** تشخيص: بيقول إذا كان الإشعار اتسجّل فعلًا في النظام ولا لأ. */
