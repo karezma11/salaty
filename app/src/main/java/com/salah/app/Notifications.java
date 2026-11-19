@@ -24,23 +24,39 @@ public final class Notifications {
     }
 
     /**
-     * أيقونة شريط الحالة (جنب الساعة). أندرويد العادي بيرسمها بلون واحد أبيض، فلازم
-     * الهلال الأبيض. موبايلات vivo/iQOO بتعرض الأيقونة بألوانها، فهناك بنحط نسخة
-     * من أيقونة التطبيق نفسها (هلال دهبي على أخضر) زي ما المستخدم طلب.
+     * أيقونة شريط الحالة (جنب الساعة): الهلال الأبيض. جرّبنا في 3.12 أيقونة ملوّنة على vivo
+     * وطلعت دايرة بيضا: النظام بياخد شكلها بس ويلوّنه، زي أندرويد العادي.
      */
     static int smallIcon(Context c) {
-        String m = android.os.Build.MANUFACTURER == null ? ""
-                : android.os.Build.MANUFACTURER.toLowerCase(java.util.Locale.ROOT);
-        return (m.contains("vivo") || m.contains("iqoo"))
-                ? R.drawable.ic_notification_color : R.drawable.ic_notification;
+        return R.drawable.ic_notification;
+    }
+
+    /** أيقونة التطبيق بألوانها (هلال دهبي على أخضر) لجنب الإشعار. */
+    private static android.graphics.Bitmap appIcon;
+
+    static synchronized android.graphics.Bitmap appIcon(Context c) {
+        if (appIcon != null) return appIcon;
+        try {
+            android.graphics.drawable.Drawable d = c.getPackageManager()
+                    .getApplicationIcon(c.getPackageName());
+            int size = 192;
+            appIcon = android.graphics.Bitmap.createBitmap(size, size,
+                    android.graphics.Bitmap.Config.ARGB_8888);
+            android.graphics.Canvas cv = new android.graphics.Canvas(appIcon);
+            d.setBounds(0, 0, size, size);
+            d.draw(cv);
+        } catch (Throwable e) {
+            appIcon = null;
+        }
+        return appIcon;
     }
 
     /** لون التطبيق في الإشعارات. */
     static int accent(Context c) {
         try {
-            return androidx.core.content.ContextCompat.getColor(c, R.color.green_700);
+            return androidx.core.content.ContextCompat.getColor(c, R.color.ic_launcher_background);
         } catch (Exception e) {
-            return 0xFF0B5D3B;
+            return 0xFF073D28;
         }
     }
 
@@ -191,6 +207,7 @@ public final class Notifications {
                     .setColor(accent(c))
                     .setContentTitle(name + "  " + time)
                     .setContentText(when + "  ·  " + TimesCard.hijriLine(c))
+                    .setLargeIcon(appIcon(c))
                     .setStyle(inbox)
                     .setContentIntent(openApp(c))
                     .setOngoing(true)
@@ -207,6 +224,7 @@ public final class Notifications {
                 android.graphics.Bitmap card = TimesCard.render(c, t, idx);
                 b.setStyle(new Notification.BigPictureStyle()
                         .bigPicture(card)
+                        .bigLargeIcon((android.graphics.Bitmap) null)
                         .setBigContentTitle(name + "  " + time)
                         .setSummaryText(when));
             } catch (Throwable ignored) {
