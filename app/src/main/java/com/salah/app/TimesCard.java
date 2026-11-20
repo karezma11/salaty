@@ -38,6 +38,8 @@ final class TimesCard {
     private static final int MINT = 0xFF9FE1CB;
     private static final int GOLD = 0xFFE2B04A;
     private static final int WHITE = 0xFFFFFFFF;
+    /** علامة ✓ تحت الصلاة اللي اتسجّلت. */
+    private static final int DONE = 0xFF2E9E78;
 
     private TimesCard() {
     }
@@ -62,7 +64,8 @@ final class TimesCard {
         return sb.toString();
     }
 
-    static Bitmap render(Context c, double[] t, int next) {
+    /** logDaysAgo: يوم علامات ✓ (١ لو عدّى نص الليل والعشاء لسه بتاعة امبارح). */
+    static Bitmap render(Context c, double[] t, int next, int logDaysAgo) {
         int w = 960, h = 470;
         Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas cv = new Canvas(bmp);
@@ -100,15 +103,20 @@ final class TimesCard {
                 cv.drawRoundRect(new RectF(cx - colW / 2f + 8, top, cx + colW / 2f - 8, bottom),
                         28, 28, p);
             }
-            drawIcon(cv, i, cx, top + 72, col);
+            // اتطلعوا لفوق شوية عشان علامة ✓ تيجي تحتهم جوه المربع
+            drawIcon(cv, i, cx, top + 64, col);
             text.setColor(col);
             text.setTextSize(34);
-            cv.drawText(PrayerTimes.NAMES[i], cx, top + 180, text);
+            cv.drawText(PrayerTimes.NAMES[i], cx, top + 168, text);
             text.setColor(on ? GOLD : WHITE);
             text.setTextSize(38);
             String time = PrayerTimes.format(t[i]);
             int sp = time.indexOf(' ');
-            cv.drawText(digits(sp > 0 ? time.substring(0, sp) : time), cx, top + 236, text);
+            cv.drawText(digits(sp > 0 ? time.substring(0, sp) : time), cx, top + 222, text);
+            if (i != PrayerTimes.SUNRISE
+                    && PrayerLog.state(c, logDaysAgo, i) != PrayerLog.NOT_PRAYED) {
+                drawCheck(cv, cx, top + 252);
+            }
         }
 
         // الدعاء تحت
@@ -116,6 +124,23 @@ final class TimesCard {
         text.setTextSize(fit(text, dua(next), w - 60, 34));
         cv.drawText(dua(next), w / 2f, 428, text);
         return bmp;
+    }
+
+    private static void drawCheck(Canvas cv, float x, float y) {
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        p.setColor(DONE);
+        cv.drawCircle(x, y, 14, p);
+        Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
+        line.setColor(WHITE);
+        line.setStyle(Paint.Style.STROKE);
+        line.setStrokeWidth(4);
+        line.setStrokeCap(Paint.Cap.ROUND);
+        line.setStrokeJoin(Paint.Join.ROUND);
+        Path ck = new Path();
+        ck.moveTo(x - 6.5f, y + 0.5f);
+        ck.lineTo(x - 1.5f, y + 5.5f);
+        ck.lineTo(x + 7f, y - 4.5f);
+        cv.drawPath(ck, line);
     }
 
     /** يصغّر الخط لحد ما السطر ييجي في العرض. */

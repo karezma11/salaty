@@ -189,6 +189,11 @@ public final class Notifications {
             String name = PrayerTimes.NAMES[idx];
             String time = PrayerTimes.format(t[idx]);
 
+            // «صلّيت»: الصلاة اللي وقتها دخل (العشاء بعد نص الليل = بتاعة امبارح)
+            int[] cur = PrayerLog.current(idx, PrayerLog.isToday(next[1]));
+            String curDay = Progress.dayKey(cur[1]);
+            boolean curPending = PrayerLog.stateOn(c, curDay, cur[0]) == PrayerLog.NOT_PRAYED;
+
             // تصميم أندرويد العادي، من غير RemoteViews: على vivo (Funtouch 15) الإشعار
             // بالتصميم المخصص كان بيتسجّل وبعدين واجهة النظام بتشيله ومابيظهرش خالص.
             Notification.InboxStyle inbox = new Notification.InboxStyle()
@@ -218,10 +223,19 @@ public final class Notifications {
                     .setUsesChronometer(true)
                     .setChronometerCountDown(true);
 
+            // زرارين للصلاة اللي لسه ماتسجّلتش، وبيختفوا بعد التسجيل لحد الصلاة اللي بعدها
+            if (curPending) {
+                b.addAction(new Notification.Action.Builder(null,
+                        "صلّيت " + PrayerTimes.NAMES[cur[0]],
+                        PrayedReceiver.intent(c, cur[0], curDay, PrayerLog.ALONE, 60)).build());
+                b.addAction(new Notification.Action.Builder(null, "في جماعة",
+                        PrayedReceiver.intent(c, cur[0], curDay, PrayerLog.JAMAA, 61)).build());
+            }
+
             // الشكل «س»: صورة بالتاريخ الهجري والصلوات برموزها ودعاء، لما الإشعار يتفتح.
             // لو الرسم فشل لأي سبب بتفضل القائمة العادية.
             try {
-                android.graphics.Bitmap card = TimesCard.render(c, t, idx);
+                android.graphics.Bitmap card = TimesCard.render(c, t, idx, cur[1]);
                 b.setStyle(new Notification.BigPictureStyle()
                         .bigPicture(card)
                         .bigLargeIcon((android.graphics.Bitmap) null)

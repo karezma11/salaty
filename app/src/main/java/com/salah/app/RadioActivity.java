@@ -20,6 +20,8 @@ public class RadioActivity extends BaseActivity implements Audio.Listener {
     private LinearLayout list;
     private TextView sub;
     private final Map<String, TextView> badges = new HashMap<>();
+    private SleepStrip sleepStrip;
+    private TextView sleepValue;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,6 +32,8 @@ public class RadioActivity extends BaseActivity implements Audio.Listener {
         Ui.applyNaskh(title, true);
         sub = findViewById(R.id.screenSub);
         list = findViewById(R.id.list);
+        sleepStrip = SleepStrip.aboveList(this);
+        sleepStrip.setOnChange(this::refresh);
         render(Radio.all(this), null);
     }
 
@@ -56,6 +60,18 @@ public class RadioActivity extends BaseActivity implements Audio.Listener {
                 query == null ? "اكتب اسم القارئ" : "اضغط لبحث جديد أو عرض الكل");
         search.setOnClickListener(v -> askSearch());
         list.addView(search);
+
+        // مؤقت النوم: الإذاعة تقف لوحدها (ومن الإشعار كمان بزرار الهلال)
+        View sleep = inflater.inflate(R.layout.item_setting, list, false);
+        TextView sleepLabel = sleep.findViewById(R.id.label);
+        sleepLabel.setText("مؤقت النوم");
+        Ui.applyNaskh(sleepLabel, true);
+        sleepValue = sleep.findViewById(R.id.value);
+        sleep.setOnClickListener(v -> SleepStrip.pick(this, false, () -> {
+            refresh();
+            sleepStrip.resume();
+        }));
+        list.addView(sleep);
 
         for (Radio.Station s : stations) {
             View row = inflater.inflate(R.layout.item_setting, list, false);
@@ -113,6 +129,11 @@ public class RadioActivity extends BaseActivity implements Audio.Listener {
             Toast.makeText(this, "الإذاعة دي مش متاحة دلوقتي — جرّب واحدة تانية",
                     Toast.LENGTH_LONG).show();
         }
+        if (sleepValue != null) {
+            sleepValue.setText(SleepTimer.isActive()
+                    ? "شغّال — " + SleepTimer.shortLabel()
+                    : "اختار مدة، والإذاعة تقف لوحدها");
+        }
         String playing = Audio.currentId();
         for (Map.Entry<String, TextView> e : badges.entrySet()) {
             e.getValue().setText(e.getKey().equals(playing)
@@ -131,11 +152,13 @@ public class RadioActivity extends BaseActivity implements Audio.Listener {
         super.onResume();
         Audio.attach(this);
         refresh();
+        sleepStrip.resume();
     }
 
     @Override
     protected void onPause() {
         Audio.detach(this);
+        sleepStrip.pause();
         super.onPause();
     }
 }

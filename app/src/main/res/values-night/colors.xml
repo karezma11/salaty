@@ -20,4 +20,10 @@
 
     <!-- خلفية إشعار الأذان: غامقة ثابتة في الوضعين عشان أندرويد يختار نص أبيض -->
     <color name="notif_adhan_bg">#07402A</color>
+
+    <!-- شريط مؤقت النوم في الوضع الليلي -->
+    <color name="sleep_bg">#2E281A</color>
+    <color name="sleep_line">#5A4B24</color>
+    <color name="sleep_ink">#F0DDA0</color>
+    <color name="sleep_btn">#3A3222</color>
 </resources>

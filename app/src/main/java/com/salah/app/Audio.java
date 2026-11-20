@@ -182,6 +182,20 @@ public final class Audio {
         return reconnecting;
     }
 
+    /** شغّال بث مباشر (إذاعة)؟ */
+    public static boolean isLive() {
+        return liveUrl != null;
+    }
+
+    /** يغيّر الصوت (من ٠ لـ ١)، ومؤقت النوم بيستخدمه للتوطية في آخر ٣٠ ثانية. */
+    static void setVolume(float v) {
+        float vol = Math.max(0f, Math.min(1f, v));
+        try {
+            if (player != null) player.setVolume(vol, vol);
+        } catch (IllegalStateException ignored) {
+        }
+    }
+
     /** يشغّل بث مباشر من رابط. */
     public static boolean playUrl(Context c, String url, String id,
                                   String title_, String subtitle_) {
@@ -429,5 +443,6 @@ public final class Audio {
         title = "";
         subtitle = "";
         fire();
+        SleepTimer.playbackEnded();
     }
 }

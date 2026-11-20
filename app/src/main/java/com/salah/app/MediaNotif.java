@@ -27,7 +27,13 @@ final class MediaNotif {
         void next();
 
         void stop();
+
+        /** زرار الهلال: مؤقت النوم. */
+        void sleep();
     }
+
+    private static final String CUSTOM_SLEEP = "salaty.sleep";
+    private static final String CUSTOM_STOP = "salaty.stop";
 
     private static Bitmap art;
 
@@ -55,6 +61,15 @@ final class MediaNotif {
             public void onStop() {
                 controls.stop();
             }
+
+            @Override
+            public void onCustomAction(String action, android.os.Bundle extras) {
+                if (CUSTOM_SLEEP.equals(action)) {
+                    controls.sleep();
+                } else if (CUSTOM_STOP.equals(action)) {
+                    controls.stop();
+                }
+            }
         });
         session.setActive(true);
     }
@@ -66,11 +81,11 @@ final class MediaNotif {
 
     /**
      * يبني الإشعار. next = null لو مفيش "التالي".
-     * الأزرار: تشغيل/إيقاف، التالي (لو موجود)، إنهاء.
+     * الأزرار: تشغيل/إيقاف، التالي (لو موجود)، الهلال (مؤقت النوم)، إنهاء.
      */
     Notification build(Context c, String channel, String title, String text, boolean playing,
                        PendingIntent open, PendingIntent toggle, PendingIntent next,
-                       PendingIntent stop) {
+                       PendingIntent sleep, boolean sleepOn, PendingIntent stop) {
         Bitmap artwork = artwork(c);
         session.setMetadata(new MediaMetadata.Builder()
                 .putString(MediaMetadata.METADATA_KEY_TITLE, title)
@@ -80,10 +95,17 @@ final class MediaNotif {
         long actions = PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_PLAY
                 | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_STOP;
         if (next != null) actions |= PlaybackState.ACTION_SKIP_TO_NEXT;
+        // أندرويد ١٣+ بيرسم أزرار كارت التشغيل من الـ MediaSession مش من أزرار الإشعار،
+        // فالهلال و«إنهاء» لازم يبقوا custom actions كمان
         session.setPlaybackState(new PlaybackState.Builder()
                 .setActions(actions)
                 .setState(playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED,
                         PlaybackState.PLAYBACK_POSITION_UNKNOWN, playing ? 1f : 0f)
+                .addCustomAction(new PlaybackState.CustomAction.Builder(CUSTOM_SLEEP,
+                        "مؤقت النوم", sleepOn ? R.drawable.ic_sleep_on : R.drawable.ic_sleep)
+                        .build())
+                .addCustomAction(new PlaybackState.CustomAction.Builder(CUSTOM_STOP,
+                        "إنهاء", R.drawable.ic_stop).build())
                 .build());
 
         Notification.Builder b = new Notification.Builder(c, channel)
@@ -103,9 +125,12 @@ final class MediaNotif {
         b.addAction(action(c, playing ? R.drawable.ic_pause : R.drawable.ic_play,
                 playing ? "إيقاف مؤقت" : "تشغيل", toggle));
         if (next != null) b.addAction(action(c, R.drawable.ic_next, "التالي", next));
+        b.addAction(action(c, sleepOn ? R.drawable.ic_sleep_on : R.drawable.ic_sleep,
+                "مؤقت النوم", sleep));
         b.addAction(action(c, R.drawable.ic_stop, "إنهاء", stop));
 
-        int[] compact = next != null ? new int[]{0, 1, 2} : new int[]{0, 1};
+        // المقفول: تشغيل/إيقاف والهلال وإنهاء («التالي» في المفتوح)
+        int[] compact = next != null ? new int[]{0, 2, 3} : new int[]{0, 1, 2};
         b.setStyle(new Notification.MediaStyle()
                 .setMediaSession(session.getSessionToken())
                 .setShowActionsInCompactView(compact));

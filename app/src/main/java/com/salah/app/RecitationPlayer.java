@@ -43,8 +43,8 @@ public final class RecitationPlayer {
     /** يكمّل للسورة اللي بعدها لوحده. */
     private static boolean continuous;
     private static float speed = 1.0f;
-    /** مؤقّت النوم: وقت التوقف، أو 0. */
-    private static long stopAt;
+    /** صوت التلاوة (مؤقت النوم بيوطّيه في آخر آية). */
+    private static float volume = 1f;
 
     private RecitationPlayer() {
     }
@@ -130,13 +130,26 @@ public final class RecitationPlayer {
         }
     }
 
-    /** مؤقّت النوم بالدقائق، و0 يلغيه. */
-    public static void setSleepMinutes(int minutes) {
-        stopAt = minutes <= 0 ? 0 : System.currentTimeMillis() + minutes * 60000L;
+    /** يغيّر صوت التلاوة (من ٠ لـ ١)، ومؤقت النوم بيستخدمه للتوطية. */
+    static void setVolume(float v) {
+        volume = Math.max(0f, Math.min(1f, v));
+        try {
+            if (player != null) player.setVolume(volume, volume);
+        } catch (IllegalStateException ignored) {
+        }
     }
 
-    public static long sleepRemaining() {
-        return stopAt == 0 ? 0 : Math.max(0, stopAt - System.currentTimeMillis());
+    /** الوقت الباقي في الآية الشغالة، أو 0 لو مش معروف. */
+    static long ayahRemainingMs() {
+        try {
+            if (player == null || !player.isPlaying()) return 0;
+            int d = player.getDuration();
+            if (d <= 0) return 0;
+            float sp = speed > 0 ? speed : 1f;
+            return (long) (Math.max(0, d - player.getCurrentPosition()) / sp);
+        } catch (IllegalStateException e) {
+            return 0;
+        }
     }
 
     /** تربط الشاشة بالتشغيل الجاري من غير ما تبدأ من الأول. */
@@ -213,6 +226,7 @@ public final class RecitationPlayer {
                     return;
                 }
                 try {
+                    p.setVolume(volume, volume);
                     p.start();
                     applySpeed();
                 } catch (IllegalStateException ignored) {
@@ -263,9 +277,8 @@ public final class RecitationPlayer {
     }
 
     private static void next() {
-        // مؤقّت النوم
-        if (stopAt != 0 && System.currentTimeMillis() >= stopAt) {
-            stopAt = 0;
+        // مؤقت النوم: الوقت خلص والآية اللي كانت شغالة خلصت
+        if (SleepTimer.expired()) {
             finish();
             return;
         }
@@ -305,6 +318,10 @@ public final class RecitationPlayer {
         }
 
         // آخر السورة
+        if (SleepTimer.isEndOfSura()) {
+            finish();
+            return;
+        }
         if (continuous && sura < 114 && app != null) {
             int nextSura = sura + 1;
             java.util.List<Quran.Sura> all = Quran.suras(app);
@@ -362,17 +379,20 @@ public final class RecitationPlayer {
         setRange(0, 0, 1);
         repeatEach = 1;
         playedTimes = 0;
-        stopAt = 0;
         paused = false;
         sura = 0;
         ayah = 0;
+        volume = 1f;
         fireStopped();
         listener = null;
+        SleepTimer.playbackEnded();
     }
 
     private static void finish() {
         releaseOnly();
         paused = false;
+        volume = 1f;
         fireStopped();
+        SleepTimer.playbackEnded();
     }
 }

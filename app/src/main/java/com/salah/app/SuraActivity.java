@@ -42,6 +42,7 @@ public class SuraActivity extends BaseActivity
     private boolean hideText;
     private boolean bodyReady;
     private int pendingJump;
+    private SleepStrip sleepStrip;
 
     private final Handler main = new Handler(Looper.getMainLooper());
 
@@ -49,6 +50,11 @@ public class SuraActivity extends BaseActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sura);
+
+        // شريط مؤقت النوم فوق شريط التشغيل
+        android.view.View card = findViewById(R.id.playerCard);
+        android.view.ViewGroup cardParent = (android.view.ViewGroup) card.getParent();
+        sleepStrip = SleepStrip.insert(this, cardParent, cardParent.indexOfChild(card));
 
         green = ContextCompat.getColor(this, R.color.green_700);
         highlightColor = ContextCompat.getColor(this, R.color.highlight);
@@ -122,7 +128,7 @@ public class SuraActivity extends BaseActivity
                 RecitationPlayer.continuous() ? "يكمّل للسورة اللي بعدها ✓" : "يقف عند آخر السورة",
                 "سرعة التلاوة: " + speedLabel(),
                 hideText ? "أظهر النص (وضع الحفظ شغّال)" : "وضع الحفظ — إخفاء النص",
-                "مؤقّت النوم"
+                SleepTimer.isActive() ? "مؤقت النوم: " + SleepTimer.shortLabel() : "مؤقت النوم"
         };
         new AlertDialog.Builder(this)
                 .setTitle("التلاوة والحفظ")
@@ -220,21 +226,7 @@ public class SuraActivity extends BaseActivity
     }
 
     private void pickSleep() {
-        final int[] choices = {0, 10, 20, 30, 60};
-        String[] labels = new String[choices.length];
-        for (int i = 0; i < choices.length; i++) {
-            labels[i] = choices[i] == 0 ? "من غير مؤقّت"
-                    : "يقف بعد " + Ui.arabicDigits(choices[i]) + " دقيقة";
-        }
-        new AlertDialog.Builder(this)
-                .setTitle("مؤقّت النوم")
-                .setItems(labels, (d, w) -> {
-                    RecitationPlayer.setSleepMinutes(choices[w]);
-                    Toast.makeText(this, choices[w] == 0 ? "اتلغى المؤقّت"
-                            : "هيقف بعد " + Ui.arabicDigits(choices[w]) + " دقيقة",
-                            Toast.LENGTH_SHORT).show();
-                })
-                .show();
+        SleepStrip.pick(this, true, () -> sleepStrip.resume());
     }
 
     /** وضع الحفظ: يخفي النص ويسيب الصوت. */
@@ -593,11 +585,13 @@ public class SuraActivity extends BaseActivity
             highlightAyah(RecitationPlayer.currentAyah());
         }
         syncControls();
+        sleepStrip.resume();
     }
 
     @Override
     protected void onPause() {
         savePosition();
+        sleepStrip.pause();
         super.onPause();
     }
 

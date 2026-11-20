@@ -26,6 +26,19 @@ public class AdhanService extends Service {
     private static final int NOTIF_ID = 1;
 
     private MediaPlayer player;
+    /** الصلاة اللي أذانها شغال، واليوم بتاعها (لزرار «صلّيت»). */
+    private int prayer = PrayerTimes.FAJR;
+    private String day;
+    private static AdhanService running;
+
+    /** بعد «صلّيت» من أي إشعار: إشعار الأذان (لو شغال) يشيل الزراير ويقول إنها اتسجّلت. */
+    static void refreshIfRunning() {
+        AdhanService s = running;
+        if (s == null || s.player == null) return;
+        android.app.NotificationManager nm =
+                s.getSystemService(android.app.NotificationManager.class);
+        if (nm != null) nm.notify(NOTIF_ID, s.buildNotification(s.prayer));
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -34,8 +47,14 @@ public class AdhanService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        int prayer = intent == null ? PrayerTimes.FAJR : intent.getIntExtra("prayer", PrayerTimes.FAJR);
         boolean stop = intent != null && ACTION_STOP.equals(intent.getAction());
+        if (!stop) {
+            prayer = intent == null ? PrayerTimes.FAJR
+                    : intent.getIntExtra("prayer", PrayerTimes.FAJR);
+            day = Progress.dayKey(0);
+        }
+        if (day == null) day = Progress.dayKey(0);
+        running = this;
 
         Notification n = buildNotification(prayer);
         if (Build.VERSION.SDK_INT >= 29) {
@@ -58,7 +77,15 @@ public class AdhanService extends Service {
         PendingIntent stopPi = PendingIntent.getService(this, 11, stopIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Action stopAction = new Notification.Action.Builder(null, "إيقاف", stopPi).build();
-        return new Notification.Builder(this, Notifications.CH_ADHAN)
+
+        // «صلّيت» و«في جماعة» جنب «إيقاف»، ولو اتسجّلت الإشعار بيقول كده بدل الزراير
+        String text = Adhans.NAMES[Prefs.adhanVoice(this)];
+        boolean fard = prayer != PrayerTimes.SUNRISE && prayer >= 0 && prayer <= 5 && day != null;
+        int logged = fard ? PrayerLog.stateOn(this, day, prayer) : PrayerLog.NOT_PRAYED;
+        if (fard && logged != PrayerLog.NOT_PRAYED) {
+            text = "✓ اتسجّلت " + PrayerLog.label(logged);
+        }
+        Notification.Builder b = new Notification.Builder(this, Notifications.CH_ADHAN)
                 .setSmallIcon(Notifications.smallIcon(this))
                 // لون غامق ثابت: مع setColorized أندرويد بيختار لون النص حسب
                 // الخلفية، والأخضر الفاتح كان بيخليه يختار نص غامق صعب القراءة
@@ -67,14 +94,20 @@ public class AdhanService extends Service {
                 .setColorized(true)
                 .setSubText(Prefs.city(this))
                 .setContentTitle("حان الآن موعد صلاة " + PrayerTimes.NAMES[prayer])
-                .setContentText(Adhans.NAMES[Prefs.adhanVoice(this)])
+                .setContentText(text)
                 .setContentIntent(Notifications.openApp(this))
                 .setCategory(Notification.CATEGORY_ALARM)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setShowWhen(false)
                 .setOngoing(true)
-                .addAction(stopAction)
-                .build();
+                .addAction(stopAction);
+        if (fard && logged == PrayerLog.NOT_PRAYED) {
+            b.addAction(new Notification.Action.Builder(null, "صلّيت",
+                    PrayedReceiver.intent(this, prayer, day, PrayerLog.ALONE, 62)).build());
+            b.addAction(new Notification.Action.Builder(null, "في جماعة",
+                    PrayedReceiver.intent(this, prayer, day, PrayerLog.JAMAA, 63)).build());
+        }
+        return b.build();
     }
 
     private void play(int prayer) {
@@ -126,12 +159,14 @@ public class AdhanService extends Service {
 
     private void finish() {
         releasePlayer();
+        if (running == this) running = null;
         stopForeground(true);
         stopSelf();
     }
 
     @Override
     public void onDestroy() {
+        if (running == this) running = null;
         releasePlayer();
         super.onDestroy();
     }

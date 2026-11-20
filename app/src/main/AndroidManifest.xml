@@ -176,6 +176,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".PrayedReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".UpdateReceiver"
             android:exported="true">
             <intent-filter>

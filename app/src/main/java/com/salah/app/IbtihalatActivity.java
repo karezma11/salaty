@@ -15,6 +15,7 @@ public class IbtihalatActivity extends BaseActivity implements Audio.Listener {
 
     private final List<TextView> values = new ArrayList<>();
     private List<Ibtihal.Track> tracks;
+    private SleepStrip sleepStrip;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,6 +28,7 @@ public class IbtihalatActivity extends BaseActivity implements Audio.Listener {
         TextView sub = findViewById(R.id.screenSub);
 
         LinearLayout list = findViewById(R.id.list);
+        sleepStrip = SleepStrip.aboveList(this);
         tracks = Ibtihal.available(this);
 
         if (tracks.isEmpty()) {
@@ -95,12 +97,14 @@ public class IbtihalatActivity extends BaseActivity implements Audio.Listener {
         super.onResume();
         Audio.attach(this);
         refresh();
+        sleepStrip.resume();
     }
 
     @Override
     protected void onPause() {
         // الصوت بيكمّل في الخلفية
         Audio.detach(this);
+        sleepStrip.pause();
         super.onPause();
     }
 }

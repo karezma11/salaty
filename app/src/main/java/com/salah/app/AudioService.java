@@ -10,11 +10,12 @@ import android.os.Build;
 import android.os.IBinder;
 
 /** تخلّي أصوات التطبيق شغالة والشاشة مقفولة، مع تحكّم من الإشعار. */
-public class AudioService extends Service implements Audio.Listener {
+public class AudioService extends Service implements Audio.Listener, SleepTimer.Listener {
 
     public static final String ACTION_SHOW = "com.salah.app.AUDIO_SHOW";
     public static final String ACTION_TOGGLE = "com.salah.app.AUDIO_TOGGLE";
     public static final String ACTION_STOP = "com.salah.app.AUDIO_STOP";
+    public static final String ACTION_SLEEP = "com.salah.app.AUDIO_SLEEP";
 
     private static final int NOTIF_ID = 7;
 
@@ -37,6 +38,12 @@ public class AudioService extends Service implements Audio.Listener {
             startService(new Intent(AudioService.this, AudioService.class)
                     .setAction(ACTION_STOP));
         }
+
+        @Override
+        public void sleep() {
+            startService(new Intent(AudioService.this, AudioService.class)
+                    .setAction(ACTION_SLEEP));
+        }
     };
 
     @Override
@@ -50,10 +57,13 @@ public class AudioService extends Service implements Audio.Listener {
         if (action == null) action = ACTION_SHOW;
 
         Audio.setWatcher(this);
+        SleepTimer.addListener(this);
         startInForeground();
 
         if (ACTION_TOGGLE.equals(action)) {
             Audio.toggle();
+        } else if (ACTION_SLEEP.equals(action)) {
+            SleepTimer.cycle(false);
         } else if (ACTION_STOP.equals(action)) {
             Audio.stop();
             return START_NOT_STICKY;
@@ -80,10 +90,14 @@ public class AudioService extends Service implements Audio.Listener {
     private Notification build() {
         Notifications.ensureChannels(this);
         if (media == null) media = new MediaNotif(this, "salaty-audio", controls);
+        String sleep = SleepTimer.shortLabel();
+        String sub = Audio.subtitle();
+        if (!sleep.isEmpty()) sub = sub.isEmpty() ? sleep : sub + " · " + sleep;
         return media.build(this, Notifications.CH_RECITATION,
-                Audio.title().isEmpty() ? "صلاتي" : Audio.title(), Audio.subtitle(),
+                Audio.title().isEmpty() ? "صلاتي" : Audio.title(), sub,
                 Audio.isPlaying(), Notifications.openApp(this),
-                self(ACTION_TOGGLE, 51), null, self(ACTION_STOP, 52));
+                self(ACTION_TOGGLE, 51), null,
+                self(ACTION_SLEEP, 53), SleepTimer.isActive(), self(ACTION_STOP, 52));
     }
 
     private void update() {
@@ -93,6 +107,7 @@ public class AudioService extends Service implements Audio.Listener {
 
     private void finish() {
         Audio.setWatcher(null);
+        SleepTimer.removeListener(this);
         stopForeground(true);
         stopSelf();
     }
@@ -107,8 +122,14 @@ public class AudioService extends Service implements Audio.Listener {
     }
 
     @Override
+    public void onSleepChanged() {
+        if (Audio.isActive()) update();
+    }
+
+    @Override
     public void onDestroy() {
         Audio.setWatcher(null);
+        SleepTimer.removeListener(this);
         if (media != null) media.release();
         super.onDestroy();
     }

@@ -11,12 +11,14 @@ import android.os.IBinder;
 import java.util.List;
 
 /** تخلّي التلاوة شغالة في الخلفية، وتعرض تحكّم في الإشعارات وشاشة القفل. */
-public class RecitationService extends Service implements RecitationPlayer.Listener {
+public class RecitationService extends Service
+        implements RecitationPlayer.Listener, SleepTimer.Listener {
 
     public static final String ACTION_SHOW = "com.salah.app.REC_SHOW";
     public static final String ACTION_TOGGLE = "com.salah.app.REC_TOGGLE";
     public static final String ACTION_NEXT = "com.salah.app.REC_NEXT";
     public static final String ACTION_STOP = "com.salah.app.REC_STOP";
+    public static final String ACTION_SLEEP = "com.salah.app.REC_SLEEP";
 
     private static final int NOTIF_ID = 2;
 
@@ -42,6 +44,12 @@ public class RecitationService extends Service implements RecitationPlayer.Liste
             startService(new Intent(RecitationService.this, RecitationService.class)
                     .setAction(ACTION_STOP));
         }
+
+        @Override
+        public void sleep() {
+            startService(new Intent(RecitationService.this, RecitationService.class)
+                    .setAction(ACTION_SLEEP));
+        }
     };
 
     @Override
@@ -55,6 +63,7 @@ public class RecitationService extends Service implements RecitationPlayer.Liste
         if (action == null) action = ACTION_SHOW;
 
         RecitationPlayer.setWatcher(this);
+        SleepTimer.addListener(this);
         startInForeground();
 
         if (ACTION_TOGGLE.equals(action)) {
@@ -66,6 +75,8 @@ public class RecitationService extends Service implements RecitationPlayer.Liste
             update();
         } else if (ACTION_NEXT.equals(action)) {
             RecitationPlayer.jumpTo(RecitationPlayer.currentAyah() + 1);
+        } else if (ACTION_SLEEP.equals(action)) {
+            SleepTimer.cycle(true);
         } else if (ACTION_STOP.equals(action)) {
             RecitationPlayer.stop();
             return START_NOT_STICKY;
@@ -102,14 +113,17 @@ public class RecitationService extends Service implements RecitationPlayer.Liste
     private Notification build() {
         Notifications.ensureChannels(this);
         if (media == null) media = new MediaNotif(this, "salaty-recitation", controls);
+        // لما المؤقت شغال، الوقت الباقي بياخد مكان اسم القارئ في السطر التاني
+        String sleep = SleepTimer.shortLabel();
         return media.build(this, Notifications.CH_RECITATION,
                 "سورة " + name(),
                 "الآية " + Ui.arabicDigits(RecitationPlayer.currentAyah())
                         + " من " + Ui.arabicDigits(RecitationPlayer.lastAyah())
-                        + " · " + Reciters.current(this).name,
+                        + " · " + (sleep.isEmpty() ? Reciters.current(this).name : sleep),
                 RecitationPlayer.isPlaying(),
                 Notifications.openSura(this, RecitationPlayer.currentSura()),
-                self(ACTION_TOGGLE, 21), self(ACTION_NEXT, 22), self(ACTION_STOP, 23));
+                self(ACTION_TOGGLE, 21), self(ACTION_NEXT, 22),
+                self(ACTION_SLEEP, 24), SleepTimer.isActive(), self(ACTION_STOP, 23));
     }
 
     private void update() {
@@ -119,6 +133,7 @@ public class RecitationService extends Service implements RecitationPlayer.Liste
 
     private void finish() {
         RecitationPlayer.setWatcher(null);
+        SleepTimer.removeListener(this);
         stopForeground(true);
         stopSelf();
     }
@@ -134,8 +149,14 @@ public class RecitationService extends Service implements RecitationPlayer.Liste
     }
 
     @Override
+    public void onSleepChanged() {
+        if (RecitationPlayer.isActive()) update();
+    }
+
+    @Override
     public void onDestroy() {
         RecitationPlayer.setWatcher(null);
+        SleepTimer.removeListener(this);
         if (media != null) media.release();
         super.onDestroy();
     }

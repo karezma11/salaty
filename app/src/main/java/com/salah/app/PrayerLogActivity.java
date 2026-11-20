@@ -42,6 +42,9 @@ public class PrayerLogActivity extends BaseActivity {
                 int st = PrayerLog.cycle(this, 0, prayer);
                 value.setText(PrayerLog.label(st));
                 updateStats();
+                // علامات ✓ وزراير «صلّيت» في الإشعارات تفضل زي السجل
+                Notifications.updateTimes(this);
+                AdhanService.refreshIfRunning();
             });
             list.addView(row);
         }
