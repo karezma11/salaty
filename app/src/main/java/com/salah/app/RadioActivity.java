@@ -116,7 +116,8 @@ public class RadioActivity extends BaseActivity implements Audio.Listener {
         String playing = Audio.currentId();
         for (Map.Entry<String, TextView> e : badges.entrySet()) {
             e.getValue().setText(e.getKey().equals(playing)
-                    ? (Audio.isPlaying() ? "شغّال الآن ⏸" : "جاري الاتصال...") : "بث مباشر");
+                    ? (Audio.isReconnecting() ? "انقطع — بيعيد الاتصال…"
+                    : Audio.isPlaying() ? "شغّال الآن ⏸" : "جاري الاتصال...") : "بث مباشر");
         }
     }
 

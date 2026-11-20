@@ -49,7 +49,8 @@ public final class Audio {
     }
 
     public static boolean isActive() {
-        return player != null;
+        // وقت إعادة الاتصال مفيش player، بس الخدمة والإشعار لازم يفضلوا
+        return player != null || reconnecting;
     }
 
     /** هل آخر تشغيل فشل؟ القراءة بتصفّر العلامة. */
@@ -95,6 +96,7 @@ public final class Audio {
 
     private static boolean playOne(Context c, String assetPath, String id,
                                    String title_, String subtitle_) {
+        stopLive();
         release();
         app = c.getApplicationContext();
         MediaPlayer mp = new MediaPlayer();
@@ -127,48 +129,185 @@ public final class Audio {
         }
     }
 
+    // ===== البث المباشر: إعادة اتصال تلقائي =====
+    // البث بيقطع لوحده أحيانًا (النت أو السيرفر). طول ما المستخدم ماوقّفش، بنحاول نوصّل
+    // تاني بفواصل بتزيد، وبنراقب لو الصوت علّق من غير ما يطلع خطأ.
+
+    private static final android.os.Handler main =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    private static String liveUrl;
+    private static boolean reconnecting;
+    private static int retries;
+    private static long lastPos = -1;
+    private static long stuckSince;
+    private static long bufferingSince;
+    private static android.net.wifi.WifiManager.WifiLock wifiLock;
+    /** نوقف المحاولة بعد حوالي ٢٠ دقيقة من غير نجاح. */
+    private static final int MAX_RETRIES = 60;
+
+    private static final Runnable retry = () -> {
+        if (liveUrl == null || app == null) return;
+        connect(app, false);
+    };
+
+    /** كل ١٠ ثواني: لو الصوت مش بيتقدّم ٢٠ ثانية، أو بيحمّل ٢٠ ثانية، نوصّل تاني. */
+    private static final Runnable watchdog = new Runnable() {
+        @Override
+        public void run() {
+            if (liveUrl == null) return;
+            main.postDelayed(this, 10000);
+            MediaPlayer p = player;
+            if (p == null || paused || reconnecting) return;
+            long now = android.os.SystemClock.elapsedRealtime();
+            if (bufferingSince > 0 && now - bufferingSince > 20000) {
+                dropped();
+                return;
+            }
+            try {
+                if (!p.isPlaying()) return;
+                long pos = p.getCurrentPosition();
+                if (pos != lastPos) {
+                    lastPos = pos;
+                    stuckSince = now;
+                } else if (stuckSince > 0 && now - stuckSince > 20000) {
+                    dropped();
+                }
+            } catch (IllegalStateException e) {
+                dropped();
+            }
+        }
+    };
+
+    public static boolean isReconnecting() {
+        return reconnecting;
+    }
+
     /** يشغّل بث مباشر من رابط. */
     public static boolean playUrl(Context c, String url, String id,
                                   String title_, String subtitle_) {
         clearQueue();
-        release();
+        stopLive();
         app = c.getApplicationContext();
+        liveUrl = url;
+        currentId = id;
+        title = title_;
+        subtitle = subtitle_;
+        retries = 0;
+        boolean ok = connect(app, true);
+        main.removeCallbacks(watchdog);
+        if (ok) main.postDelayed(watchdog, 10000);
+        return ok;
+    }
+
+    private static boolean connect(Context c, boolean first) {
+        release();
         MediaPlayer mp = new MediaPlayer();
         try {
             mp.setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build());
-            mp.setDataSource(url);
+            // المعالج والواي فاي مايناموش والشاشة مقفولة، وده كان من أسباب القطع
+            mp.setWakeMode(c, android.os.PowerManager.PARTIAL_WAKE_LOCK);
+            holdWifi(c);
+            mp.setDataSource(liveUrl);
             mp.setOnPreparedListener(p -> {
                 if (player != p) return;
                 try {
                     p.start();
                 } catch (IllegalStateException ignored) {
                 }
+                reconnecting = false;
+                retries = 0;
+                bufferingSince = 0;
+                lastPos = -1;
+                stuckSince = android.os.SystemClock.elapsedRealtime();
+                subtitle = "بث مباشر";
                 fire();
             });
+            mp.setOnInfoListener((p, what, extra) -> {
+                if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
+                    bufferingSince = android.os.SystemClock.elapsedRealtime();
+                } else if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END) {
+                    bufferingSince = 0;
+                }
+                return false;
+            });
             mp.setOnErrorListener((p, what, extra) -> {
-                failed = true;
-                stop();
+                if (player == p) dropped();
                 return true;
             });
-            mp.setOnCompletionListener(p -> stop());
+            mp.setOnCompletionListener(p -> {
+                // البث المباشر مالوش نهاية: لو "خلص" يبقى قطع
+                if (player == p) dropped();
+            });
             player = mp;
-            currentId = id;
-            title = title_;
-            subtitle = subtitle_;
             paused = false;
+            bufferingSince = android.os.SystemClock.elapsedRealtime();
             // البث بيحتاج وقت للاتصال، فالتحضير بيحصل في الخلفية
             mp.prepareAsync();
-            startService(app);
+            // وقت إعادة الاتصال الخدمة شغالة أصلًا، وتشغيلها من الخلفية ممنوع
+            if (first) startService(c);
             fire();
             return true;
         } catch (Exception e) {
             mp.release();
             player = null;
-            failed = true;
+            if (first) {
+                failed = true;
+                stopLive();
+                return false;
+            }
+            dropped();
             return false;
+        }
+    }
+
+    /** البث وقع: نحاول تاني بعد شوية (٢، ٥، ١٠، وبعدين كل ٢٠ ثانية). */
+    private static void dropped() {
+        if (liveUrl == null) return;
+        release();
+        if (retries >= MAX_RETRIES) {
+            failed = true;
+            stop();
+            return;
+        }
+        reconnecting = true;
+        retries++;
+        long wait = retries == 1 ? 2000 : retries == 2 ? 5000 : retries == 3 ? 10000 : 20000;
+        subtitle = "انقطع البث — بيعيد الاتصال…";
+        main.removeCallbacks(retry);
+        main.postDelayed(retry, wait);
+        fire();
+    }
+
+    private static void holdWifi(Context c) {
+        try {
+            if (wifiLock == null) {
+                android.net.wifi.WifiManager wm = (android.net.wifi.WifiManager)
+                        c.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                if (wm == null) return;
+                int mode = android.os.Build.VERSION.SDK_INT >= 29
+                        ? android.net.wifi.WifiManager.WIFI_MODE_FULL_LOW_LATENCY
+                        : android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF;
+                wifiLock = wm.createWifiLock(mode, "salaty:radio");
+                wifiLock.setReferenceCounted(false);
+            }
+            if (!wifiLock.isHeld()) wifiLock.acquire();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static void stopLive() {
+        liveUrl = null;
+        reconnecting = false;
+        retries = 0;
+        bufferingSince = 0;
+        main.removeCallbacks(retry);
+        main.removeCallbacks(watchdog);
+        try {
+            if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
+        } catch (Exception ignored) {
         }
     }
 
@@ -258,6 +397,11 @@ public final class Audio {
     }
 
     public static void toggle() {
+        // إيقاف من الإشعار وقت إعادة الاتصال = المستخدم مش عايز يكمّل
+        if (reconnecting) {
+            stop();
+            return;
+        }
         if (isPlaying()) {
             pause();
         } else {
@@ -277,6 +421,7 @@ public final class Audio {
     }
 
     public static void stop() {
+        stopLive();
         release();
         clearQueue();
         paused = false;
