@@ -24,6 +24,9 @@ public class DownloadService extends Service {
     public static final String ACTION_SURA = "com.salah.app.DL_SURA";
     public static final String ACTION_ALL = "com.salah.app.DL_ALL";
     public static final String ACTION_CANCEL = "com.salah.app.DL_CANCEL";
+    /** المصحف كامل لكل القراء. */
+    public static final String ACTION_EVERYONE = "com.salah.app.DL_EVERYONE";
+    public static final String EXTRA_WIFI_ONLY = "wifi_only";
     public static final String EXTRA_SURA = "sura";
 
     private static final int NOTIF_ID = 6;
@@ -63,6 +66,14 @@ public class DownloadService extends Service {
         }
     }
 
+    public static void startEveryone(Context c, boolean wifiOnly) {
+        try {
+            c.startForegroundService(new Intent(c, DownloadService.class)
+                    .setAction(ACTION_EVERYONE).putExtra(EXTRA_WIFI_ONLY, wifiOnly));
+        } catch (RuntimeException ignored) {
+        }
+    }
+
     public static void cancel(Context c) {
         cancelled.set(true);
     }
@@ -91,8 +102,20 @@ public class DownloadService extends Service {
 
         final boolean all = ACTION_ALL.equals(action);
         final int one = intent == null ? 1 : intent.getIntExtra(EXTRA_SURA, 1);
+        final boolean everyone = ACTION_EVERYONE.equals(action);
+        final boolean wifiOnly = intent != null && intent.getBooleanExtra(EXTRA_WIFI_ONLY, false);
 
         worker = new Thread(() -> {
+            if (everyone) {
+                try {
+                    downloadEveryone(wifiOnly);
+                } finally {
+                    activeSura = 0;
+                    stopForeground(true);
+                    stopSelf();
+                }
+                return;
+            }
             try {
                 Queue<Integer> queue = new ArrayDeque<>();
                 if (all) {
@@ -113,16 +136,55 @@ public class DownloadService extends Service {
         return START_NOT_STICKY;
     }
 
+    /** كل القراء، سورة سورة. بيقف لو الواي فاي اتقطع (لو «على الواي فاي بس») أو المساحة خلصت. */
+    private void downloadEveryone(boolean wifiOnly) {
+        String stopReason = null;
+        int n = Reciters.ALL.length;
+        outer:
+        for (int r = 0; r < n; r++) {
+            Reciters.Reciter rec = Reciters.ALL[r];
+            for (int s = 1; s <= 114; s++) {
+                if (cancelled.get()) {
+                    stopReason = "اتلغى";
+                    break outer;
+                }
+                if (wifiOnly && !Downloads.onWifi(this)) {
+                    stopReason = "وقف: الواي فاي اتقطع";
+                    break outer;
+                }
+                if (Recitation.folder(this).getParentFile() != null
+                        && Recitation.folder(this).getParentFile().getUsableSpace() < 200L * 1024 * 1024) {
+                    stopReason = "وقف: مساحة الموبايل خلصت";
+                    break outer;
+                }
+                downloadSura(rec.id, s, "القارئ " + Ui.arabicDigits(r + 1) + " من "
+                        + Ui.arabicDigits(n) + " · " + rec.name + " · ");
+            }
+        }
+        Recitation.invalidate();
+        Notifications.show(this, Notifications.CH_UPDATES, 81,
+                stopReason == null ? "اتحمّل المصحف كامل لكل القراء ✓" : "تحميل المصحف لكل القراء — " + stopReason,
+                stopReason == null ? "التلاوة كلها بقت تشتغل من غير نت"
+                        : "ادخل «إدارة التحميلات» ودوس «حمّل المصحف كامل لكل القراء» ويكمّل من مكانه");
+    }
+
     private void downloadSura(int sura) {
+        downloadSura(Prefs.reciter(this), sura, "");
+    }
+
+    private void downloadSura(String reciter, int sura, String prefix) {
         List<Quran.Sura> all = Quran.suras(this);
         if (sura < 1 || sura > all.size()) return;
         Quran.Sura s = all.get(sura - 1);
         final int total = s.ayas;
-        activeSura = sura;
+        final boolean mine = reciter.equals(Prefs.reciter(this));
+        if (mine) activeSura = sura;
 
-        if (Downloads.haveCount(this, sura, total) == total) {
-            report(sura, total, total);
-            finished(sura, true);
+        if (Downloads.haveCount(this, reciter, sura, total) == total) {
+            if (mine) {
+                report(sura, total, total);
+                finished(sura, true);
+            }
             return;
         }
 
@@ -134,12 +196,12 @@ public class DownloadService extends Service {
             final int ayah = a;
             pool.submit(() -> {
                 if (cancelled.get()) return;
-                boolean ok = Downloads.fetchAyah(DownloadService.this, sura, ayah);
+                boolean ok = Downloads.fetchAyah(DownloadService.this, reciter, sura, ayah);
                 if (!ok) failed.incrementAndGet();
                 int d = done.incrementAndGet();
                 if (d % 3 == 0 || d == total) {
-                    notify(d, total, "سورة " + s.name);
-                    report(sura, d, total);
+                    notify(d, total, prefix + "سورة " + s.name);
+                    if (mine) report(sura, d, total);
                 }
             });
         }
@@ -154,7 +216,7 @@ public class DownloadService extends Service {
         } catch (InterruptedException e) {
             pool.shutdownNow();
         }
-        finished(sura, failed.get() == 0 && !cancelled.get());
+        if (mine) finished(sura, failed.get() == 0 && !cancelled.get());
     }
 
     private void report(int sura, int done, int total) {

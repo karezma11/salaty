@@ -68,6 +68,10 @@ public class ListenActivity extends BaseActivity
         reciterView = text("", 13, 0xFFCFEBDD, false);
         reciterView.setOnClickListener(v -> pickReciter());
         hero.addView(reciterView);
+        TextView everyone = text("⬇  حمّل المصحف كامل لكل القراء", 13, 0xFFF3D27A, true);
+        everyone.setPadding(0, px(8), 0, 0);
+        everyone.setOnClickListener(v -> Downloads.askEveryone(this));
+        hero.addView(everyone);
         root.addView(hero);
 
         ScrollView scroll = new ScrollView(this);

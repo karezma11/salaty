@@ -73,6 +73,16 @@ public class DownloadsActivity extends BaseActivity {
                     + " · " + mb(total));
         }
 
+        // المصحف كامل لكل القراء بضغطة واحدة
+        View everyone = inflater.inflate(R.layout.item_setting, list, false);
+        TextView el = everyone.findViewById(R.id.label);
+        el.setText("حمّل المصحف كامل لكل القراء");
+        Ui.applyNaskh(el, true);
+        ((TextView) everyone.findViewById(R.id.value)).setText(
+                Ui.arabicDigits(Reciters.ALL.length) + " قراء · ١١٤ سورة لكل قارئ · بيكمّل من مكانه");
+        everyone.setOnClickListener(v -> Downloads.askEveryone(this));
+        list.addView(everyone);
+
         final long totalBytes = total;
         if (totalBytes > 0) {
             View all = inflater.inflate(R.layout.item_setting, list, false);
