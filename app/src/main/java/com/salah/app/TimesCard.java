@@ -126,6 +126,56 @@ final class TimesCard {
         return bmp;
     }
 
+    /**
+     * صف الصلوات الست بس (للويدجت الشكل «أ»): خلفية شفافة، والجاية في مربع دهبي برمز
+     * ونص غامق، واللي فاتت باهتة شوية، و✓ تحت اللي اتسجّلت.
+     */
+    static Bitmap renderStrip(Context c, double[] t, int next, int logDaysAgo) {
+        int w = 900, h = 300;
+        Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        Canvas cv = new Canvas(bmp);
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        Typeface font = null;
+        Typeface bold = null;
+        try {
+            font = ResourcesCompat.getFont(c, R.font.amiri_regular);
+            bold = ResourcesCompat.getFont(c, R.font.amiri_bold);
+        } catch (Exception ignored) {
+        }
+        Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
+        text.setTextAlign(Paint.Align.CENTER);
+
+        float gap = 10;
+        float colW = (w - gap * 5) / 6f;
+        for (int i = 0; i < 6; i++) {
+            // من اليمين للشمال
+            float right = w - i * (colW + gap);
+            float cx = right - colW / 2f;
+            boolean on = i == next;
+            boolean past = !on && i < next;
+            p.setColor(on ? GOLD : 0x14FFFFFF);
+            cv.drawRoundRect(new RectF(right - colW, 0, right, h), 30, 30, p);
+
+            int col = on ? 0xFF073D28 : past ? MINT : WHITE;
+            drawIcon(cv, i, cx, 58, col);
+            text.setColor(col);
+            if (bold != null) text.setTypeface(bold);
+            text.setTextSize(fit(text, PrayerTimes.NAMES[i], colW - 12, 36));
+            cv.drawText(PrayerTimes.NAMES[i], cx, 152, text);
+            if (font != null) text.setTypeface(font);
+            text.setTextSize(36);
+            String time = PrayerTimes.format(t[i]);
+            int sp = time.indexOf(' ');
+            cv.drawText(digits(sp > 0 ? time.substring(0, sp) : time), cx, 206, text);
+            if (i != PrayerTimes.SUNRISE
+                    && PrayerLog.state(c, logDaysAgo, i) != PrayerLog.NOT_PRAYED) {
+                drawCheck(cv, cx, 252);
+            }
+        }
+        return bmp;
+    }
+
     private static void drawCheck(Canvas cv, float x, float y) {
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         p.setColor(DONE);

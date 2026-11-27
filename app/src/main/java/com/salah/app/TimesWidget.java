@@ -6,9 +6,11 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.os.SystemClock;
+import android.view.View;
 import android.widget.RemoteViews;
 
-/** ويدجت الشاشة الرئيسية: الصلاة القادمة ومواقيت اليوم. */
+/** ويدجت الشاشة الرئيسية بشكل الإشعار الدائم. */
 public class TimesWidget extends AppWidgetProvider {
 
     public static final String ACTION_REFRESH = "com.salah.app.WIDGET_REFRESH";
@@ -26,6 +28,7 @@ public class TimesWidget extends AppWidgetProvider {
         }
     }
 
+    /** الشكل «أ» (3.19): نفس الإشعار الدائم — التاريخ الهجري والصلوات برموزها والعدّاد والدعاء و«صلّيت». */
     private static RemoteViews build(Context c) {
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_times);
         try {
@@ -33,26 +36,41 @@ public class TimesWidget extends AppWidgetProvider {
             long[] next = Scheduler.nextPrayer(c);
             int idx = (int) next[0];
 
-            v.setTextViewText(R.id.wName, PrayerTimes.NAMES[idx]);
-            v.setTextViewText(R.id.wTime, PrayerTimes.format(t[idx]));
-
-            long left = Math.max(0, (next[1] - System.currentTimeMillis()) / 60000L);
-            v.setTextViewText(R.id.wLeft, left >= 60
-                    ? "بعد " + Ui.arabicDigits(left / 60) + " س و " + Ui.arabicDigits(left % 60) + " د"
-                    : "بعد " + Ui.arabicDigits(left) + " دقيقة");
-
+            v.setTextViewText(R.id.wHijri, TimesCard.hijriLine(c));
             v.setTextViewText(R.id.wCity, Prefs.city(c));
+            v.setTextViewText(R.id.wNext, PrayerTimes.NAMES[idx] + " بعد");
 
-            StringBuilder all = new StringBuilder();
-            for (int i = 0; i < 6; i++) {
-                if (i == PrayerTimes.SUNRISE) continue;
-                if (all.length() > 0) all.append("   ");
-                all.append(PrayerTimes.NAMES[i]).append(' ').append(PrayerTimes.format(t[i]));
+            // العدّاد بيعدّ لوحده كل ثانية من غير ما يصحّي التطبيق
+            long msLeft = Math.max(0, next[1] - System.currentTimeMillis());
+            v.setChronometer(R.id.wCount, SystemClock.elapsedRealtime() + msLeft, null, true);
+            v.setChronometerCountDown(R.id.wCount, true);
+
+            // «صلّيت»: الصلاة اللي وقتها دخل (العشاء بعد نص الليل = بتاعة امبارح)
+            int[] cur = PrayerLog.current(idx, PrayerLog.isToday(next[1]));
+            String curDay = Progress.dayKey(cur[1]);
+            boolean pending = PrayerLog.stateOn(c, curDay, cur[0]) == PrayerLog.NOT_PRAYED;
+
+            try {
+                v.setImageViewBitmap(R.id.wStrip, TimesCard.renderStrip(c, t, idx, cur[1]));
+            } catch (Throwable ignored) {
             }
-            v.setTextViewText(R.id.wAll, all.toString());
+            v.setTextViewText(R.id.wDua, TimesCard.dua(idx));
+
+            if (pending) {
+                v.setViewVisibility(R.id.wPrayed, View.VISIBLE);
+                v.setViewVisibility(R.id.wJamaa, View.VISIBLE);
+                v.setTextViewText(R.id.wPrayed, "صلّيت " + PrayerTimes.NAMES[cur[0]]);
+                v.setOnClickPendingIntent(R.id.wPrayed,
+                        PrayedReceiver.intent(c, cur[0], curDay, PrayerLog.ALONE, 62));
+                v.setOnClickPendingIntent(R.id.wJamaa,
+                        PrayedReceiver.intent(c, cur[0], curDay, PrayerLog.JAMAA, 63));
+            } else {
+                v.setViewVisibility(R.id.wPrayed, View.GONE);
+                v.setViewVisibility(R.id.wJamaa, View.GONE);
+            }
         } catch (Exception e) {
-            v.setTextViewText(R.id.wName, "صلاتي");
-            v.setTextViewText(R.id.wLeft, "افتح التطبيق لتحديد المدينة");
+            v.setTextViewText(R.id.wHijri, "صلاتي");
+            v.setTextViewText(R.id.wCity, "افتح التطبيق لتحديد المدينة");
         }
         v.setOnClickPendingIntent(R.id.wRoot, open(c));
         return v;

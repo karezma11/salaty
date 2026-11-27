@@ -177,6 +177,8 @@ public final class Notifications {
 
     /** إشعار دائم فيه الصلاة القادمة ومواقيت اليوم كلها، بتصميم خاص بالتطبيق. */
     public static void updateTimes(Context c) {
+        // الويدجت بيعرض نفس الحاجة (✓ و«صلّيت» والعدّاد)، فبيتحدّث معاه حتى لو الإشعار مقفول
+        TimesWidget.refresh(c);
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         if (nm == null) return;
         if (!Prefs.persistentTimes(c)) {
