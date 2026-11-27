@@ -103,6 +103,10 @@
             android:name=".PrayerLogActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ListenActivity"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"

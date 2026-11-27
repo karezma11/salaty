@@ -100,6 +100,19 @@ public final class Prefs {
         sp(c).edit().putInt("adhan_voice", index).apply();
     }
 
+    /** آخر مكان اتسمع في التلاوة («كمّل من آخر مرة»). */
+    public static int listenSura(Context c) {
+        return sp(c).getInt("listen_sura", 0);
+    }
+
+    public static int listenAyah(Context c) {
+        return sp(c).getInt("listen_ayah", 1);
+    }
+
+    public static void setListenPos(Context c, int sura, int ayah) {
+        sp(c).edit().putInt("listen_sura", sura).putInt("listen_ayah", ayah).apply();
+    }
+
     /** منبّه السحور: كام دقيقة قبل الإمساك (0 = مقفول). */
     public static int suhoorMinutes(Context c) {
         return sp(c).getInt("suhoor_minutes", 60);

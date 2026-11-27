@@ -42,6 +42,9 @@ public final class RecitationPlayer {
     private static int rangeDone;
     /** يكمّل للسورة اللي بعدها لوحده. */
     private static boolean continuous;
+    /** قايمة سور بترتيب معيّن (قوائم «استمع للقرآن»)، أو null = السورة اللي بعدها في المصحف. */
+    private static int[] suraQueue;
+    private static int queuePos;
     private static float speed = 1.0f;
     /** صوت التلاوة (مؤقت النوم بيوطّيه في آخر آية). */
     private static float volume = 1f;
@@ -169,6 +172,8 @@ public final class RecitationPlayer {
     private static void fireAyah() {
         Listener l = listener;
         Listener w = watcher;
+        // «كمّل من آخر مرة» في شاشة الاستماع
+        if (app != null && sura > 0 && ayah > 0) Prefs.setListenPos(app, sura, ayah);
         if (l != null) l.onAyah(sura, ayah);
         if (w != null) w.onAyah(sura, ayah);
     }
@@ -180,8 +185,72 @@ public final class RecitationPlayer {
         if (w != null) w.onStopped();
     }
 
+    /** السورة اللي بتتحمّل دلوقتي في الخلفية عشان تيجي بعد اللي شغالة، أو 0. */
+    private static volatile int prefetching;
+
+    /**
+     * «صفر خطوات يدوية»: وهي بتسمع سورة والتكملة شغالة، السورة اللي بعدها بتتحمّل لوحدها
+     * آية آية في خيط جانبي (الخدمة foreground شغالة فالتطبيق مش هيتقفل).
+     */
+    private static void prefetchNextSura() {
+        final Context c = app;
+        final int next = nextSura();
+        if (!continuous || c == null || next < 1) return;
+        if (prefetching == next || !Downloads.online(c)) return;
+        prefetching = next;
+        new Thread(() -> {
+            try {
+                java.util.List<Quran.Sura> all = Quran.suras(c);
+                if (next > all.size()) return;
+                int ayas = all.get(next - 1).ayas;
+                for (int a = 1; a <= ayas && prefetching == next; a++) {
+                    Downloads.fetchAyah(c, next, a);
+                }
+            } catch (Exception ignored) {
+            } finally {
+                if (prefetching == next) prefetching = 0;
+                Recitation.invalidate();
+            }
+        }).start();
+    }
+
+    /** السورة اللي هتيجي بعد الشغالة (من القايمة أو المصحف)، أو 0. */
+    public static int nextSura() {
+        if (suraQueue != null) {
+            return queuePos + 1 < suraQueue.length ? suraQueue[queuePos + 1] : 0;
+        }
+        return sura >= 1 && sura < 114 ? sura + 1 : 0;
+    }
+
+    /** نسخة من القايمة الشغالة (أو null)، ومكان السورة الشغالة فيها. */
+    public static int[] queue() {
+        return suraQueue == null ? null : suraQueue.clone();
+    }
+
+    public static int queuePos() {
+        return queuePos;
+    }
+
+    /** قوائم «استمع للقرآن»: سور ورا بعض بترتيب القايمة، من السورة رقم from فيها. */
+    public static boolean startQueue(Context c, int[] queue, int from, int fromAyah, Listener l) {
+        if (queue == null || from < 0 || from >= queue.length) return false;
+        java.util.List<Quran.Sura> all = Quran.suras(c);
+        int s = queue[from];
+        if (s < 1 || s > all.size()) return false;
+        boolean ok = startInternal(c, s, fromAyah, all.get(s - 1).ayas, l, queue, from);
+        return ok;
+    }
+
     /** يبدأ سورة من آية معينة. يرجع false لو الصوت مش متاح. */
     public static boolean start(Context c, int suraIndex, int fromAyah, int ayahCount, Listener l) {
+        return startInternal(c, suraIndex, fromAyah, ayahCount, l, null, 0);
+    }
+
+    private static boolean startInternal(Context c, int suraIndex, int fromAyah, int ayahCount,
+                                         Listener l, int[] queue, int from) {
+        suraQueue = queue;
+        queuePos = from;
+        if (queue != null) continuous = true;
         releaseOnly();
         app = c.getApplicationContext();
         listener = l;
@@ -191,14 +260,37 @@ public final class RecitationPlayer {
         paused = false;
         playedTimes = 0;
         rangeDone = 0;
-        return playCurrent();
+        boolean ok = playCurrent();
+        if (ok) prefetchNextSura();
+        return ok;
     }
+
+    /** يشغّل التكملة لوحدها (شاشة «استمع للقرآن» والكهف)، ويبدأ تحميل اللي بعدها. */
+    public static void setContinuousAndPrefetch(boolean on) {
+        continuous = on;
+        if (on && player != null) prefetchNextSura();
+    }
+
+    private static final android.os.Handler waiter =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    private static int waits;
 
     private static boolean playCurrent() {
         if (app == null || ayah > lastAyah) {
             finish();
             return false;
         }
+        // الآية لسه بتتحمّل (السورة الجاية بتنزل في الخلفية): نستنى شوية بدل ما نقف
+        if (prefetching == sura && Recitation.externalFile(app, sura, ayah) == null
+                && waits < 60) {
+            waits++;
+            final int s = sura, a = ayah;
+            waiter.postDelayed(() -> {
+                if (sura == s && ayah == a && app != null) playCurrent();
+            }, 1500);
+            return true;
+        }
+        waits = 0;
         MediaPlayer mp = new MediaPlayer();
         AssetFileDescriptor fd = null;
         try {
@@ -322,14 +414,16 @@ public final class RecitationPlayer {
             finish();
             return;
         }
-        if (continuous && sura < 114 && app != null) {
-            int nextSura = sura + 1;
+        if (continuous && nextSura() > 0 && app != null) {
+            int nextSura = nextSura();
             java.util.List<Quran.Sura> all = Quran.suras(app);
             if (nextSura <= all.size() && Recitation.available(app, nextSura)) {
                 sura = nextSura;
+                if (suraQueue != null) queuePos++;
                 ayah = 1;
                 lastAyah = all.get(nextSura - 1).ayas;
                 playCurrent();
+                prefetchNextSura();
                 return;
             }
         }
@@ -383,6 +477,7 @@ public final class RecitationPlayer {
         sura = 0;
         ayah = 0;
         volume = 1f;
+        suraQueue = null;
         fireStopped();
         listener = null;
         SleepTimer.playbackEnded();

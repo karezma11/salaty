@@ -146,6 +146,8 @@ public class MainActivity extends BaseActivity {
         GridLayout grid = findViewById(R.id.actionsGrid);
         addAction(grid, R.drawable.ic_quran, "القرآن الكريم", "قراءة وتلاوة",
                 v -> startActivity(new Intent(this, QuranActivity.class)));
+        addAction(grid, R.drawable.ic_listen, "استمع للقرآن", "السور ورا بعض",
+                v -> startActivity(new Intent(this, ListenActivity.class)));
         addAction(grid, R.drawable.ic_adhkar, "الأذكار", "الصباح والمساء",
                 v -> startActivity(new Intent(this, AdhkarActivity.class)));
         addAction(grid, R.drawable.ic_ibtihal, "ابتهالات وتواشيح", "استماع بدون نت",
@@ -160,8 +162,7 @@ public class MainActivity extends BaseActivity {
                 v -> startActivity(new Intent(this, WirdActivity.class)));
         addAction(grid, R.drawable.ic_log, "سجل الصلوات", "تابع صلواتك",
                 v -> startActivity(new Intent(this, PrayerLogActivity.class)));
-        addAction(grid, R.drawable.ic_settings, "الإعدادات", "المدينة والأذان",
-                v -> startActivity(new Intent(this, SettingsActivity.class)));
+        // «الإعدادات» اتشالت من هنا عشان الكروت تفضل ٣×٣ (فيه زرار الترس فوق)
     }
 
     private void addAction(GridLayout grid, int icon, String label, String sub,

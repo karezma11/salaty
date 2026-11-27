@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- استمع للقرآن: سماعات -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"
+    android:tint="?attr/colorPrimary">
+    <path android:fillColor="@android:color/white"
+        android:pathData="M12,3C7,3 3,7 3,12v6c0,1.7 1.3,3 3,3h1c0.6,0 1,-0.4 1,-1v-6c0,-0.6 -0.4,-1 -1,-1H5v-1c0,-3.9 3.1,-7 7,-7s7,3.1 7,7v1h-2c-0.6,0 -1,0.4 -1,1v6c0,0.6 0.4,1 1,1h1c1.7,0 3,-1.3 3,-3v-6C21,7 17,3 12,3z"/>
+</vector>

@@ -35,9 +35,25 @@ public class IbtihalatActivity extends BaseActivity implements Audio.Listener {
             sub.setText("مفيش ابتهالات متاحة في هذه النسخة");
             return;
         }
-        sub.setText(Ui.arabicDigits(tracks.size()) + " ابتهال وتوشيح · بيكمّل والشاشة مقفولة");
+        sub.setText(Ui.arabicDigits(tracks.size()) + " ابتهال وتوشيح · بيكمّلوا ورا بعض والشاشة مقفولة");
 
         LayoutInflater inflater = LayoutInflater.from(this);
+        // كله ورا بعض من الأول، أو بترتيب عشوائي
+        View all = inflater.inflate(R.layout.item_setting, list, false);
+        TextView allLabel = all.findViewById(R.id.label);
+        allLabel.setText("شغّل الكل");
+        Ui.applyNaskh(allLabel, true);
+        ((TextView) all.findViewById(R.id.value)).setText(
+                Ui.arabicDigits(tracks.size()) + " ابتهال ورا بعض");
+        all.setOnClickListener(v -> playFrom(order(0, false)));
+        list.addView(all);
+        View shuffle = inflater.inflate(R.layout.item_setting, list, false);
+        TextView shLabel = shuffle.findViewById(R.id.label);
+        shLabel.setText("ترتيب عشوائي");
+        Ui.applyNaskh(shLabel, true);
+        ((TextView) shuffle.findViewById(R.id.value)).setText("كل مرة بترتيب مختلف");
+        shuffle.setOnClickListener(v -> playFrom(order(0, true)));
+        list.addView(shuffle);
         for (int i = 0; i < tracks.size(); i++) {
             final int index = i;
             Ibtihal.Track t = tracks.get(i);
@@ -66,14 +82,35 @@ public class IbtihalatActivity extends BaseActivity implements Audio.Listener {
         return "ibtihal-" + tracks.get(index).file;
     }
 
+    /** الضغط على ابتهال: هو واللي بعده لحد الآخر، وبعدين اللي قبله، فالكل بيتسمع ورا بعض. */
     private void toggle(int index) {
         if (idOf(index).equals(Audio.currentId())) {
             Audio.stop();
             return;
         }
-        Ibtihal.Track t = tracks.get(index);
-        boolean ok = Audio.playAsset(this, Ibtihal.asset(t), idOf(index), t.title, t.kind);
-        if (!ok) Toast.makeText(this, "تعذّر تشغيل هذا المقطع", Toast.LENGTH_SHORT).show();
+        playFrom(order(index, false));
+    }
+
+    /** ترتيب التشغيل: من start ولفّة كاملة، أو عشوائي. */
+    private java.util.List<Integer> order(int start, boolean shuffle) {
+        java.util.List<Integer> o = new java.util.ArrayList<>();
+        for (int i = 0; i < tracks.size(); i++) o.add((start + i) % tracks.size());
+        if (shuffle) java.util.Collections.shuffle(o);
+        return o;
+    }
+
+    private void playFrom(java.util.List<Integer> order) {
+        java.util.List<String> assets = new java.util.ArrayList<>();
+        java.util.List<String> ids = new java.util.ArrayList<>();
+        java.util.List<String> titles = new java.util.ArrayList<>();
+        for (int i : order) {
+            assets.add(Ibtihal.asset(tracks.get(i)));
+            ids.add(idOf(i));
+            titles.add(tracks.get(i).title);
+        }
+        if (!Audio.playQueue(this, assets, ids, titles, "ابتهالات وتواشيح")) {
+            Toast.makeText(this, "تعذّر تشغيل هذا المقطع", Toast.LENGTH_SHORT).show();
+        }
         refresh();
     }
 
