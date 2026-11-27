@@ -16,6 +16,13 @@ import android.os.PowerManager;
 
 import java.io.IOException;
 
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.os.Handler;
+import android.os.Looper;
+
 /**
  * خدمة تشغيل الأذان كامل في الخلفية.
  * بتشغل ملف الأذان المختار من assets/adhan، ولو مش موجود بتشغل نغمة المنبه.
@@ -26,6 +33,89 @@ public class AdhanService extends Service {
     private static final int NOTIF_ID = 1;
 
     private MediaPlayer player;
+
+    // ===== الأذان بيعلى بالتدريج، وقلب الموبايل على وشه يوقفه =====
+    private static final long FADE_MS = 15000L;
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private long fadeStart;
+    private final Runnable fade = new Runnable() {
+        @Override
+        public void run() {
+            MediaPlayer p = player;
+            if (p == null) return;
+            float f = Math.min(1f, (android.os.SystemClock.elapsedRealtime() - fadeStart)
+                    / (float) FADE_MS);
+            // من ١٥٪ لـ ١٠٠٪، وبالتربيع عشان الودن تحس إنه بيعلى بانتظام
+            float v = 0.15f + 0.85f * f * f;
+            try {
+                p.setVolume(v, v);
+            } catch (IllegalStateException ignored) {
+                return;
+            }
+            if (f < 1f) main.postDelayed(this, 250);
+        }
+    };
+    private SensorManager sensors;
+    /** شفنا الموبايل مش مقلوب الأول؟ عشان لو كان مقلوب على الترابيزة من الأول الأذان مايقفش. */
+    private boolean seenUp;
+    private long downSince;
+    private final SensorEventListener flip = new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent e) {
+            float z = e.values[2];
+            if (z > -3f) {
+                seenUp = true;
+                downSince = 0;
+            } else if (z < -8f && seenUp) {
+                long now = android.os.SystemClock.elapsedRealtime();
+                if (downSince == 0) {
+                    downSince = now;
+                } else if (now - downSince > 700) {
+                    AdhanCheck.record(AdhanService.this, "الأذان وقف بقلب الموبايل");
+                    finish();
+                }
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        }
+    };
+
+    private void startExtras(MediaPlayer mp) {
+        if (Prefs.adhanFade(this)) {
+            try {
+                mp.setVolume(0.15f, 0.15f);
+            } catch (IllegalStateException ignored) {
+            }
+            fadeStart = android.os.SystemClock.elapsedRealtime();
+            main.post(fade);
+        }
+        if (Prefs.adhanFlip(this)) {
+            try {
+                sensors = getSystemService(SensorManager.class);
+                Sensor acc = sensors == null ? null
+                        : sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+                if (acc != null) {
+                    seenUp = false;
+                    downSince = 0;
+                    sensors.registerListener(flip, acc, SensorManager.SENSOR_DELAY_NORMAL);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void stopExtras() {
+        main.removeCallbacks(fade);
+        if (sensors != null) {
+            try {
+                sensors.unregisterListener(flip);
+            } catch (Exception ignored) {
+            }
+            sensors = null;
+        }
+    }
     /** الصلاة اللي أذانها شغال، واليوم بتاعها (لزرار «صلّيت»). */
     private int prayer = PrayerTimes.FAJR;
     private String day;
@@ -149,19 +239,23 @@ public class AdhanService extends Service {
                 return true;
             });
             mp.prepare();
-            mp.start();
             player = mp;
+            startExtras(mp);
+            mp.start();
             int vol = AdhanCheck.alarmVolume(this);
             AdhanCheck.record(this, (loaded ? "الأذان اشتغل" : "ملف الأذان مش موجود: اشتغلت نغمة المنبّه")
                     + (vol == 0 ? " — بس صوت المنبّه على صفر" : ""));
         } catch (Exception e) {
             AdhanCheck.record(this, "فشل تشغيل صوت الأذان (" + e.getClass().getSimpleName() + ")");
+            stopExtras();
+            if (player == mp) player = null;
             mp.release();
             finish();
         }
     }
 
     private void releasePlayer() {
+        stopExtras();
         if (player != null) {
             try {
                 player.stop();

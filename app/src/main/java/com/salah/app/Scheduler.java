@@ -21,6 +21,10 @@ public final class Scheduler {
     private static final int REQ_ADHKAR_PM = 7;
     private static final int REQ_SILENCE = 8;
     private static final int REQ_PRE = 9;
+    private static final int REQ_SUHOOR = 11;
+    private static final int REQ_IFTAR = 12;
+    private static final int REQ_KAHF = 13;
+    private static final int REQ_QIYAM = 14;
 
     private Scheduler() {
     }
@@ -217,7 +221,98 @@ public final class Scheduler {
         }
     }
 
+    /** يوم بعد كام يوم من النهارده، الساعة ١٢ الضهر (عشان atHour يحط الوقت عليه). */
+    private static Calendar dayCal(int dayOffset) {
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_MONTH, dayOffset);
+        return cal;
+    }
+
+    /**
+     * بداية الثلث الأخير من الليلة الجاية أو اللي احنا فيها، بالمللي:
+     * لو احنا بعد نص الليل وقبل الفجر، الليلة اللي بدأت امبارح.
+     */
+    public static long qiyamMillis(Context c) {
+        long now = System.currentTimeMillis();
+        for (int day = -1; day <= 1; day++) {
+            double start = Ramadan.qiyamStart(timesFor(c, day)[PrayerTimes.MAGHRIB],
+                    timesFor(c, day + 1)[PrayerTimes.FAJR]);
+            int date = start < 12 ? day + 1 : day;
+            long at = atHour(dayCal(date), start);
+            long fajr = atHour(dayCal(day + 1), timesFor(c, day + 1)[PrayerTimes.FAJR]);
+            if (fajr > now) return at;
+        }
+        return 0;
+    }
+
+    /** السحور والإفطار (في رمضان بس)، والكهف كل جمعة، وقيام الليل لو مفعّل. */
+    public static void scheduleExtras(Context c) {
+        AlarmManager am = c.getSystemService(AlarmManager.class);
+        if (am == null) return;
+        long now = System.currentTimeMillis();
+        long suhoor = 0, iftar = 0, kahf = 0, qiyam = 0;
+        try {
+            int before = Prefs.suhoorMinutes(c);
+            for (int day = 0; day <= 1; day++) {
+                if (!Ramadan.on(c, day)) continue;
+                double[] t = timesFor(c, day);
+                if (before > 0 && suhoor == 0) {
+                    long at = atHour(dayCal(day),
+                            Ramadan.imsak(t[PrayerTimes.FAJR]) - before / 60.0);
+                    if (at > now) suhoor = at;
+                }
+                if (Prefs.iftarNotify(c) && iftar == 0) {
+                    long at = atHour(dayCal(day), t[PrayerTimes.MAGHRIB]);
+                    if (at > now) iftar = at;
+                }
+            }
+            int hour = Prefs.kahfHour(c);
+            for (int d = 0; hour > 0 && d <= 7 && kahf == 0; d++) {
+                Calendar cal = dayCal(d);
+                if (cal.get(Calendar.DAY_OF_WEEK) != Calendar.FRIDAY) continue;
+                long at = atHour(cal, hour);
+                if (at > now) kahf = at;
+            }
+            if (Prefs.qiyamAlarm(c)) {
+                long at = qiyamMillis(c);
+                if (at <= now) {
+                    // الثلث الأخير بتاع الليلة دي بدأ خلاص: الليلة الجاية
+                    double start = Ramadan.qiyamStart(timesFor(c, 0)[PrayerTimes.MAGHRIB],
+                            timesFor(c, 1)[PrayerTimes.FAJR]);
+                    at = atHour(dayCal(start < 12 ? 1 : 0), start);
+                    if (at <= now) {
+                        start = Ramadan.qiyamStart(timesFor(c, 1)[PrayerTimes.MAGHRIB],
+                                timesFor(c, 2)[PrayerTimes.FAJR]);
+                        at = atHour(dayCal(start < 12 ? 2 : 1), start);
+                    }
+                }
+                qiyam = at;
+            }
+        } catch (Exception ignored) {
+            // مفيش موقع محفوظ لسه
+        }
+        extra(c, am, REQ_SUHOOR, ExtraReceiver.SUHOOR, suhoor, true);
+        extra(c, am, REQ_IFTAR, ExtraReceiver.IFTAR, iftar, true);
+        extra(c, am, REQ_KAHF, ExtraReceiver.KAHF, kahf, false);
+        extra(c, am, REQ_QIYAM, ExtraReceiver.QIYAM, qiyam, true);
+    }
+
+    private static void extra(Context c, AlarmManager am, int req, int kind, long at,
+                              boolean exact) {
+        PendingIntent pi = PendingIntent.getBroadcast(c, req,
+                new Intent(c, ExtraReceiver.class).putExtra(ExtraReceiver.EXTRA_KIND, kind),
+                flags());
+        am.cancel(pi);
+        if (at <= 0) return;
+        if (exact && canExact(c)) {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+        } else {
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+        }
+    }
+
     public static void scheduleAll(Context c) {
+        scheduleExtras(c);
         scheduleAdhan(c);
         scheduleSalawat(c);
         scheduleFasting(c);

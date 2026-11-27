@@ -25,6 +25,8 @@ public class SuraActivity extends BaseActivity
 
     public static final String EXTRA_SURA = "sura";
     public static final String EXTRA_AYA = "aya";
+    /** تذكير الكهف: «شغّل التلاوة» بيفتح السورة ويدوس تشغيل. */
+    public static final String EXTRA_PLAY = "play";
 
     private ScrollView scroll;
     private TextView body, playerTitle, playerSub;
@@ -118,6 +120,10 @@ public class SuraActivity extends BaseActivity
         int jump = getIntent().getIntExtra(EXTRA_AYA, 0);
         if (jump <= 0) jump = Prefs.lastAyah(this, suraIndex);
         pendingJump = jump;
+        if (getIntent().getBooleanExtra(EXTRA_PLAY, false)
+                && !(RecitationPlayer.isActive() && RecitationPlayer.currentSura() == suraIndex)) {
+            playBtn.post(this::togglePlay);
+        }
     }
 
     /** خيارات التلاوة والحفظ. */

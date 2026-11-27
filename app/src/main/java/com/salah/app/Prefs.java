@@ -100,6 +100,60 @@ public final class Prefs {
         sp(c).edit().putInt("adhan_voice", index).apply();
     }
 
+    /** منبّه السحور: كام دقيقة قبل الإمساك (0 = مقفول). */
+    public static int suhoorMinutes(Context c) {
+        return sp(c).getInt("suhoor_minutes", 60);
+    }
+
+    public static void setSuhoorMinutes(Context c, int m) {
+        sp(c).edit().putInt("suhoor_minutes", m).apply();
+    }
+
+    /** إشعار الإفطار بالدعاء عند المغرب في رمضان. */
+    public static boolean iftarNotify(Context c) {
+        return sp(c).getBoolean("iftar_notify", true);
+    }
+
+    public static void setIftarNotify(Context c, boolean on) {
+        sp(c).edit().putBoolean("iftar_notify", on).apply();
+    }
+
+    /** تذكير سورة الكهف يوم الجمعة: الساعة (0 = مقفول). */
+    public static int kahfHour(Context c) {
+        return sp(c).getInt("kahf_hour", 9);
+    }
+
+    public static void setKahfHour(Context c, int h) {
+        sp(c).edit().putInt("kahf_hour", h).apply();
+    }
+
+    /** تنبيه بداية الثلث الأخير من الليل (مقفول من الأول). */
+    public static boolean qiyamAlarm(Context c) {
+        return sp(c).getBoolean("qiyam_alarm", false);
+    }
+
+    public static void setQiyamAlarm(Context c, boolean on) {
+        sp(c).edit().putBoolean("qiyam_alarm", on).apply();
+    }
+
+    /** الأذان بيبدأ واطي ويعلى بالتدريج. */
+    public static boolean adhanFade(Context c) {
+        return sp(c).getBoolean("adhan_fade", true);
+    }
+
+    public static void setAdhanFade(Context c, boolean on) {
+        sp(c).edit().putBoolean("adhan_fade", on).apply();
+    }
+
+    /** قلب الموبايل على وشه يوقف الأذان. */
+    public static boolean adhanFlip(Context c) {
+        return sp(c).getBoolean("adhan_flip", true);
+    }
+
+    public static void setAdhanFlip(Context c, boolean on) {
+        sp(c).edit().putBoolean("adhan_flip", on).apply();
+    }
+
     /** استخدام أذان الفجر الخاص (الصلاة خير من النوم). */
     public static boolean fajrAdhan(Context c) {
         return sp(c).getBoolean("adhan_fajr", true);

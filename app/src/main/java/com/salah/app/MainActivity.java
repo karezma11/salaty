@@ -32,6 +32,9 @@ public class MainActivity extends BaseActivity {
     private static final int REQ_NOTIF = 101;
 
     private TextView cityView, dateView, nextName, nextTime, countdown, warning, hint;
+    private RamadanHeader ramadanHeader;
+    /** القيام (الشكل ج): سطر بالهلال في الرأس بعد العشاء لحد الفجر. */
+    private TextView qiyamLine;
     private LinearLayout timesRow;
     private final TextView[] timeViews = new TextView[6];
     private final View[] markers = new View[6];
@@ -68,6 +71,27 @@ public class MainActivity extends BaseActivity {
 
         Ui.applyNaskh(cityView, true);
         Ui.applyNaskh(nextName, true);
+        // وضع رمضان: الرأس بيتزيّن بالفوانيس والعدّ للإفطار
+        ramadanHeader = new RamadanHeader(this, findViewById(R.id.hero),
+                findViewById(R.id.nextLabel), (View) nextName.getParent(), countdown);
+        android.widget.LinearLayout hero = findViewById(R.id.hero);
+        qiyamLine = new TextView(this);
+        qiyamLine.setTextColor(0xFFC9D3FF);
+        qiyamLine.setTextSize(13);
+        qiyamLine.setCompoundDrawablePadding(Math.round(6 * getResources().getDisplayMetrics().density));
+        android.graphics.drawable.Drawable moon = getDrawable(R.drawable.ic_notification);
+        if (moon != null) {
+            moon = moon.mutate();
+            moon.setTint(0xFFE2B04A);
+            int sz = Math.round(15 * getResources().getDisplayMetrics().density);
+            moon.setBounds(0, 0, sz, sz);
+            qiyamLine.setCompoundDrawablesRelative(moon, null, null, null);
+        }
+        android.widget.LinearLayout.LayoutParams qlp = new android.widget.LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        qlp.topMargin = Math.round(10 * getResources().getDisplayMetrics().density);
+        qiyamLine.setVisibility(View.GONE);
+        hero.addView(qiyamLine, qlp);
 
         findViewById(R.id.settingsBtn).setOnClickListener(
                 v -> startActivity(new Intent(this, SettingsActivity.class)));
@@ -192,6 +216,30 @@ public class MainActivity extends BaseActivity {
         countdown.setText(h > 0
                 ? "باقي " + h + " ساعة و " + m + " دقيقة"
                 : "باقي " + m + " دقيقة و " + s + " ثانية");
+
+        try {
+            ramadanHeader.update(this);
+        } catch (Exception ignored) {
+            // الرأس العادي يفضل ظاهر
+        }
+        // بعد العشاء لحد الفجر: الصلاة الجاية الفجر
+        try {
+            long q = nextIdx == PrayerTimes.FAJR ? Scheduler.qiyamMillis(this) : 0;
+            if (q > 0) {
+                java.util.Calendar qc = java.util.Calendar.getInstance();
+                qc.setTimeInMillis(q);
+                String when = PrayerTimes.format(qc.get(java.util.Calendar.HOUR_OF_DAY)
+                        + qc.get(java.util.Calendar.MINUTE) / 60.0);
+                qiyamLine.setText(q > System.currentTimeMillis()
+                        ? "الثلث الأخير من الليل يبدأ " + when
+                        : "احنا في الثلث الأخير من الليل · من " + when);
+                qiyamLine.setVisibility(View.VISIBLE);
+            } else {
+                qiyamLine.setVisibility(View.GONE);
+            }
+        } catch (Exception e) {
+            qiyamLine.setVisibility(View.GONE);
+        }
 
         String fasting = Hijri.fastingReason(this);
         int toRamadan = Hijri.daysToRamadan(this);

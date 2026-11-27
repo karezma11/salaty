@@ -182,6 +182,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".ExtraReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".UpdateReceiver"
             android:exported="true">
             <intent-filter>

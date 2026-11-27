@@ -49,6 +49,14 @@ public class SettingsActivity extends BaseActivity {
             Prefs.setFajrAdhan(this, !Prefs.fajrAdhan(this));
             render();
         });
+        row("الأذان يعلى بالتدريج", Prefs.adhanFade(this) ? "مفعّل" : "متوقف", v -> {
+            Prefs.setAdhanFade(this, !Prefs.adhanFade(this));
+            render();
+        });
+        row("قلب الموبايل يوقف الأذان", Prefs.adhanFlip(this) ? "مفعّل" : "متوقف", v -> {
+            Prefs.setAdhanFlip(this, !Prefs.adhanFlip(this));
+            render();
+        });
         row("تجربة الأذان", "اضغط للسماع · بيكمّل والشاشة مقفولة", v -> preview());
         // الأذان مابيشتغلش على موبايلات كتير لأن النظام بيوقّف التطبيق في الخلفية
         row("جرّب الأذان والشاشة مقفولة", "بعد دقيقة، بنفس طريق الأذان الحقيقي", v -> {
@@ -72,6 +80,29 @@ public class SettingsActivity extends BaseActivity {
         row("وقت الإقامة", iqamaLabel(), v -> pickIqama());
         row("تعديل المواقيت يدويًا", offsetsLabel(), v -> pickPrayerForOffset());
         row("كتم الموبايل وقت الصلاة", silenceLabel(), v -> toggleSilence());
+        row("شوف وضع رمضان دلوقتي", RamadanHeader.preview ? "شغّال — اضغط للإيقاف"
+                : "معاينة شكل الرئيسية في رمضان", v -> {
+            RamadanHeader.preview = !RamadanHeader.preview;
+            if (RamadanHeader.preview) {
+                startActivity(new Intent(this, MainActivity.class)
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP));
+            } else {
+                render();
+            }
+        });
+        row("منبّه السحور في رمضان", suhoorLabel(), v -> pickSuhoor());
+        row("إشعار الإفطار في رمضان", Prefs.iftarNotify(this) ? "مفعّل · بدعاء الإفطار" : "متوقف",
+                v -> {
+                    Prefs.setIftarNotify(this, !Prefs.iftarNotify(this));
+                    Scheduler.scheduleExtras(this);
+                    render();
+                });
+        row("تذكير سورة الكهف يوم الجمعة", kahfLabel(), v -> pickKahf());
+        row("تنبيه قيام الليل", qiyamLabel(), v -> {
+            Prefs.setQiyamAlarm(this, !Prefs.qiyamAlarm(this));
+            Scheduler.scheduleExtras(this);
+            render();
+        });
         row("تذكير الصلاة على النبي", salawatLabel(), v -> pickSalawat());
         row("تعديل التقويم الهجري", hijriLabel(), v -> pickHijri());
         row("تنبيه الصيام المستحب", Prefs.fastingReminder(this) ? "مفعّل" : "متوقف", v -> {
@@ -471,6 +502,64 @@ public class SettingsActivity extends BaseActivity {
         } else {
             Toast.makeText(this, "اضغط مرة تانية للإيقاف", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private String suhoorLabel() {
+        int m = Prefs.suhoorMinutes(this);
+        if (m <= 0) return "متوقف";
+        return (m == 60 ? "ساعة" : m == 90 ? "ساعة ونص" : Ui.arabicDigits(m) + " دقيقة")
+                + " قبل الإمساك";
+    }
+
+    private void pickSuhoor() {
+        final int[] choices = {0, 30, 45, 60, 90};
+        String[] labels = {"مقفول", "نص ساعة قبل الإمساك", "٤٥ دقيقة قبل الإمساك",
+                "ساعة قبل الإمساك", "ساعة ونص قبل الإمساك"};
+        new AlertDialog.Builder(this)
+                .setTitle("منبّه السحور")
+                .setItems(labels, (d, w) -> {
+                    Prefs.setSuhoorMinutes(this, choices[w]);
+                    Scheduler.scheduleExtras(this);
+                    render();
+                })
+                .show();
+    }
+
+    private String kahfLabel() {
+        int h = Prefs.kahfHour(this);
+        if (h <= 0) return "متوقف";
+        return "الساعة " + Ui.arabicDigits(h > 12 ? h - 12 : h) + (h < 12 ? " الصبح" : " الضهر");
+    }
+
+    private void pickKahf() {
+        final int[] hours = {0, 7, 8, 9, 10, 11};
+        String[] labels = new String[hours.length];
+        for (int i = 0; i < hours.length; i++) {
+            labels[i] = hours[i] == 0 ? "مقفول" : "الساعة " + Ui.arabicDigits(hours[i]) + " الصبح";
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("تذكير سورة الكهف")
+                .setItems(labels, (d, w) -> {
+                    Prefs.setKahfHour(this, hours[w]);
+                    Scheduler.scheduleExtras(this);
+                    render();
+                })
+                .show();
+    }
+
+    private String qiyamLabel() {
+        String when = "";
+        try {
+            long at = Scheduler.qiyamMillis(this);
+            if (at > 0) {
+                java.util.Calendar cal = java.util.Calendar.getInstance();
+                cal.setTimeInMillis(at);
+                when = "الثلث الأخير " + PrayerTimes.format(cal.get(java.util.Calendar.HOUR_OF_DAY)
+                        + cal.get(java.util.Calendar.MINUTE) / 60.0);
+            }
+        } catch (Exception ignored) {
+        }
+        return (Prefs.qiyamAlarm(this) ? "مفعّل" : "متوقف") + (when.isEmpty() ? "" : " · " + when);
     }
 
     private String silenceLabel() {

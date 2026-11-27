@@ -17,6 +17,8 @@ public final class Notifications {
     public static final String CH_RECITATION = "recitation_v2";
     public static final String CH_TIMES = "times_v3";
     public static final String CH_UPDATES = "updates";
+    /** منبّه السحور: أهمية عالية وصوت المنبّه، عشان يصحّي. */
+    public static final String CH_SUHOOR = "suhoor";
 
     private static final int ID_TIMES = 5;
 
@@ -101,6 +103,21 @@ public final class Notifications {
         NotificationChannel updates = new NotificationChannel(CH_UPDATES, "تحديثات التطبيق",
                 NotificationManager.IMPORTANCE_DEFAULT);
         nm.createNotificationChannel(updates);
+
+        NotificationChannel suhoor = new NotificationChannel(CH_SUHOOR, "منبّه السحور",
+                NotificationManager.IMPORTANCE_HIGH);
+        android.net.Uri alarm = android.media.RingtoneManager.getDefaultUri(
+                android.media.RingtoneManager.TYPE_ALARM);
+        if (alarm == null) {
+            alarm = android.media.RingtoneManager.getDefaultUri(
+                    android.media.RingtoneManager.TYPE_NOTIFICATION);
+        }
+        suhoor.setSound(alarm, new android.media.AudioAttributes.Builder()
+                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build());
+        suhoor.enableVibration(true);
+        nm.createNotificationChannel(suhoor);
     }
 
     public static PendingIntent openApp(Context c) {
