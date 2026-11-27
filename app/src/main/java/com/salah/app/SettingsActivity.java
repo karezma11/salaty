@@ -50,6 +50,24 @@ public class SettingsActivity extends BaseActivity {
             render();
         });
         row("تجربة الأذان", "اضغط للسماع · بيكمّل والشاشة مقفولة", v -> preview());
+        // الأذان مابيشتغلش على موبايلات كتير لأن النظام بيوقّف التطبيق في الخلفية
+        row("جرّب الأذان والشاشة مقفولة", "بعد دقيقة، بنفس طريق الأذان الحقيقي", v -> {
+            AdhanCheck.testInOneMinute(this);
+            new AlertDialog.Builder(this)
+                    .setTitle("تجربة الأذان")
+                    .setMessage("اقفل الشاشة وسيب الموبايل دقيقة.\n\nلو الأذان مااشتغلش، "
+                            + "اسمح للتطبيق بالشغل في الخلفية والتشغيل التلقائي من هنا، "
+                            + "وبعدين افتح «فحص الأذان» وابعت الصورة.")
+                    .setPositiveButton("تمام", null)
+                    .show();
+        });
+        row("السماح بالشغل في الخلفية", AdhanCheck.batteryFree(this)
+                ? "مسموح ✓" : "مهم للأذان — اضغط للسماح", v -> AdhanCheck.askBattery(this));
+        if (AdhanCheck.knownMaker()) {
+            row("التشغيل التلقائي", "من إعدادات " + AdhanCheck.makerName()
+                    + ": اسمح لصلاتي تشتغل لوحدها", v -> AdhanCheck.openAutostart(this));
+        }
+        row("فحص الأذان", "لو الأذان مابيشتغلش: اعرف السبب", v -> showAdhanReport());
         row("تنبيه قبل الأذان", preLabel(), v -> pickPre());
         row("وقت الإقامة", iqamaLabel(), v -> pickIqama());
         row("تعديل المواقيت يدويًا", offsetsLabel(), v -> pickPrayerForOffset());
@@ -116,6 +134,23 @@ public class SettingsActivity extends BaseActivity {
                         .setMessage(Notifications.diagnose(this))
                         .setPositiveButton("تمام", null)
                         .show());
+    }
+
+    private void showAdhanReport() {
+        String report = AdhanCheck.report(this);
+        new AlertDialog.Builder(this)
+                .setTitle("فحص الأذان")
+                .setMessage(report)
+                .setPositiveButton("تمام", null)
+                .setNeutralButton("نسخ", (d, w) -> {
+                    android.content.ClipboardManager cm =
+                            getSystemService(android.content.ClipboardManager.class);
+                    if (cm != null) {
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("فحص الأذان", report));
+                        Toast.makeText(this, "اتنسخ", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .show();
     }
 
     /** رقم النسخة المثبّتة — بيفرق لما تتأكد إن التحديث وصل فعلًا. */

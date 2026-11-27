@@ -346,7 +346,8 @@ public final class Audio {
                 ? queueTitles.get(queuePos) : "تشغيل";
         String id = queueIds != null && queuePos < queueIds.size()
                 ? queueIds.get(queuePos) : String.valueOf(queuePos);
-        String sub = subtitle_ + " · " + (queuePos + 1) + "/" + queueAssets.size();
+        String sub = subtitle_ + " · " + Ui.arabicDigits(queuePos + 1) + " من "
+                + Ui.arabicDigits(queueAssets.size());
         java.util.List<String> a = queueAssets, i = queueIds, ti = queueTitles;
         int pos = queuePos;
         String keepSub = subtitle_;

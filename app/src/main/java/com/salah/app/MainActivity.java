@@ -211,6 +211,11 @@ public class MainActivity extends BaseActivity {
             warning.setVisibility(View.VISIBLE);
             warning.setText("التنبيهات الدقيقة غير مفعّلة، والأذان قد يتأخر. افتح الإعدادات لتفعيلها.");
             warning.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
+        } else if (Prefs.adhanEnabled(this) && !AdhanCheck.batteryFree(this)) {
+            // من غير كده موبايلات كتير بتوقف التطبيق في الخلفية والأذان مابيشتغلش
+            warning.setVisibility(View.VISIBLE);
+            warning.setText("عشان الأذان يشتغل والموبايل مقفول: اضغط هنا واسمح لصلاتي تشتغل في الخلفية");
+            warning.setOnClickListener(v -> AdhanCheck.askBattery(this));
         } else {
             warning.setVisibility(View.GONE);
         }

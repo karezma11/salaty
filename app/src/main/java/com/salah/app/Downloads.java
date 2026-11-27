@@ -49,8 +49,8 @@ public final class Downloads {
 
     public static File target(Context c, int sura, int ayah) {
         File dir = new File(Recitation.folderOf(c, Prefs.reciter(c)),
-                String.format("%03d", sura));
-        return new File(dir, String.format("%03d%03d.mp3", sura, ayah));
+                String.format(java.util.Locale.US, "%03d", sura));
+        return new File(dir, String.format(java.util.Locale.US, "%03d%03d.mp3", sura, ayah));
     }
 
     /** ينزّل آية واحدة. يرجع true لو الملف بقى موجود وسليم. */
@@ -61,7 +61,7 @@ public final class Downloads {
         if (Recitation.externalFile(c, sura, ayah) != null) return true;
         File parent = out.getParentFile();
         if (parent != null) parent.mkdirs();
-        String name = String.format("%03d%03d.mp3", sura, ayah);
+        String name = String.format(java.util.Locale.US, "%03d%03d.mp3", sura, ayah);
         File tmp = new File(out.getAbsolutePath() + ".part");
 
         for (String mirror : mirrors(c)) {

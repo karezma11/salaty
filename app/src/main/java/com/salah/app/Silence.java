@@ -38,7 +38,9 @@ public final class Silence {
             if (nm == null) return;
             // نحفظ الوضع الحالي عشان نرجّعه زي ما كان
             Prefs.setSavedFilter(c, nm.getCurrentInterruptionFilter());
-            nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE);
+            // «المنبّهات بس» مش «صمت تام»: الصمت التام كان بيكتم الأذان نفسه (بيطلع كمنبّه)
+            // لأن الكتم بيبدأ في نفس لحظة الأذان
+            nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALARMS);
             Scheduler.scheduleSilenceEnd(c);
         } catch (Exception ignored) {
         }

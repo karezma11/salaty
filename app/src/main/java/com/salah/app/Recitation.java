@@ -25,13 +25,13 @@ public final class Recitation {
     }
 
     public static String assetName(int sura, int ayah) {
-        return String.format("%03d/%03d%03d.mp3", sura, sura, ayah);
+        return String.format(java.util.Locale.US, "%03d/%03d%03d.mp3", sura, sura, ayah);
     }
 
     /** ملف الآية للقارئ المختار، أو null. */
     public static File externalFile(Context c, int sura, int ayah) {
-        String name = String.format("%03d%03d.mp3", sura, ayah);
-        String sub = String.format("%03d", sura);
+        String name = String.format(java.util.Locale.US, "%03d%03d.mp3", sura, ayah);
+        String sub = String.format(java.util.Locale.US, "%03d", sura);
         String reciter = Prefs.reciter(c);
 
         File own = new File(new File(folderOf(c, reciter), sub), name);

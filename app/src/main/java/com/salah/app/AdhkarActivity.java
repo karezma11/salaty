@@ -147,7 +147,7 @@ public class AdhkarActivity extends BaseActivity implements Audio.Listener {
         chapterId = chId;
         title.setText(chName);
         List<Dhikr.Item> its = Dhikr.items(this, chId);
-        sub.setText(Ui.arabicDigits(its.size()) + " ذكر · اضغط على الذكر للاستماع");
+        sub.setText(Ui.arabicDigits(its.size()) + " ذكر · اضغط على ذكر وهيكمّل اللي بعده");
         list.removeAllViews();
         badges.clear();
         LayoutInflater inflater = LayoutInflater.from(this);
@@ -173,21 +173,22 @@ public class AdhkarActivity extends BaseActivity implements Audio.Listener {
             text.setText(it.text);
             Ui.applyQuranFont(text);
             TextView counter = row.findViewById(R.id.counter);
-            boolean audio = Dhikr.hasAudio(this, it);
+            boolean audio = withAudio.contains(it);
             counter.setVisibility(View.VISIBLE);
             counter.setText(audio ? "استمع" : "المصدر");
             if (audio) badges.put(idOf(it), counter);
+            // الذكر وكل اللي بعده في الباب ورا بعض؛ والضغط على الشغّال يوقفه
+            final int from = withAudio.indexOf(it);
             View.OnClickListener play = v -> {
-                if (audio) {
-                    toggle(it, counter);
-                } else {
+                if (!audio) {
                     showReference(it);
+                } else if (idOf(it).equals(Audio.currentId())) {
+                    Audio.stop();
+                } else {
+                    playAll(withAudio.subList(from, withAudio.size()), chName);
                 }
             };
-            counter.setOnClickListener(v -> {
-                if (audio) toggle(it, counter);
-                else showReference(it);
-            });
+            counter.setOnClickListener(play);
             row.setOnClickListener(play);
             row.setOnLongClickListener(v -> {
                 showReference(it);

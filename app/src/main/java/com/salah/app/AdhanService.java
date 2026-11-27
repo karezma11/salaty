@@ -29,6 +29,8 @@ public class AdhanService extends Service {
     /** الصلاة اللي أذانها شغال، واليوم بتاعها (لزرار «صلّيت»). */
     private int prayer = PrayerTimes.FAJR;
     private String day;
+    /** تجربة من الإعدادات، مش صلاة بجد. */
+    private boolean test;
     private static AdhanService running;
 
     /** بعد «صلّيت» من أي إشعار: إشعار الأذان (لو شغال) يشيل الزراير ويقول إنها اتسجّلت. */
@@ -51,16 +53,22 @@ public class AdhanService extends Service {
         if (!stop) {
             prayer = intent == null ? PrayerTimes.FAJR
                     : intent.getIntExtra("prayer", PrayerTimes.FAJR);
+            test = intent != null && intent.getBooleanExtra(AdhanReceiver.EXTRA_TEST, false);
             day = Progress.dayKey(0);
         }
         if (day == null) day = Progress.dayKey(0);
         running = this;
 
         Notification n = buildNotification(prayer);
-        if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-        } else {
-            startForeground(NOTIF_ID, n);
+        try {
+            if (Build.VERSION.SDK_INT >= 29) {
+                startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            } else {
+                startForeground(NOTIF_ID, n);
+            }
+        } catch (RuntimeException e) {
+            AdhanCheck.record(this, "النظام رفض إشعار الأذان (" + e.getClass().getSimpleName() + ")");
+            throw e;
         }
 
         if (stop) {
@@ -79,8 +87,9 @@ public class AdhanService extends Service {
         Notification.Action stopAction = new Notification.Action.Builder(null, "إيقاف", stopPi).build();
 
         // «صلّيت» و«في جماعة» جنب «إيقاف»، ولو اتسجّلت الإشعار بيقول كده بدل الزراير
-        String text = Adhans.NAMES[Prefs.adhanVoice(this)];
-        boolean fard = prayer != PrayerTimes.SUNRISE && prayer >= 0 && prayer <= 5 && day != null;
+        String text = test ? "اشتغل والشاشة مقفولة ✓" : Adhans.NAMES[Prefs.adhanVoice(this)];
+        boolean fard = !test && prayer != PrayerTimes.SUNRISE && prayer >= 0 && prayer <= 5
+                && day != null;
         int logged = fard ? PrayerLog.stateOn(this, day, prayer) : PrayerLog.NOT_PRAYED;
         if (fard && logged != PrayerLog.NOT_PRAYED) {
             text = "✓ اتسجّلت " + PrayerLog.label(logged);
@@ -93,7 +102,8 @@ public class AdhanService extends Service {
                         this, R.color.notif_adhan_bg))
                 .setColorized(true)
                 .setSubText(Prefs.city(this))
-                .setContentTitle("حان الآن موعد صلاة " + PrayerTimes.NAMES[prayer])
+                .setContentTitle(test ? "تجربة الأذان"
+                        : "حان الآن موعد صلاة " + PrayerTimes.NAMES[prayer])
                 .setContentText(text)
                 .setContentIntent(Notifications.openApp(this))
                 .setCategory(Notification.CATEGORY_ALARM)
@@ -134,13 +144,18 @@ public class AdhanService extends Service {
             }
             mp.setOnCompletionListener(p -> finish());
             mp.setOnErrorListener((p, what, extra) -> {
+                AdhanCheck.record(this, "الصوت وقف بخطأ " + what + "/" + extra);
                 finish();
                 return true;
             });
             mp.prepare();
             mp.start();
             player = mp;
+            int vol = AdhanCheck.alarmVolume(this);
+            AdhanCheck.record(this, (loaded ? "الأذان اشتغل" : "ملف الأذان مش موجود: اشتغلت نغمة المنبّه")
+                    + (vol == 0 ? " — بس صوت المنبّه على صفر" : ""));
         } catch (Exception e) {
+            AdhanCheck.record(this, "فشل تشغيل صوت الأذان (" + e.getClass().getSimpleName() + ")");
             mp.release();
             finish();
         }

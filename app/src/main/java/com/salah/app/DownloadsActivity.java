@@ -32,7 +32,7 @@ public class DownloadsActivity extends BaseActivity {
     /** حجم مجلد سورة بالميجا. */
     private long sizeOf(int sura) {
         File dir = new File(Recitation.folderOf(this, Prefs.reciter(this)),
-                String.format("%03d", sura));
+                String.format(java.util.Locale.US, "%03d", sura));
         File[] files = dir.listFiles();
         if (files == null) return 0;
         long total = 0;

@@ -138,7 +138,7 @@ public final class Dhikr {
     }
 
     public static String asset(Item it) {
-        return String.format("adhkar/%03d.mp3", it.id);
+        return String.format(java.util.Locale.US, "adhkar/%03d.mp3", it.id);
     }
 
     public static boolean hasAudio(Context c, Item it) {

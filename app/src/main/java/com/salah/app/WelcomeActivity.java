@@ -97,6 +97,11 @@ public class WelcomeActivity extends BaseActivity {
             });
         }
 
+        if (!AdhanCheck.batteryFree(this)) {
+            row("السماح بالشغل في الخلفية", "عشان الأذان يشتغل والموبايل مقفول",
+                    v -> AdhanCheck.askBattery(this));
+        }
+
         View go = row("يلا نبدأ", "تقدر تغيّر أي حاجة من الإعدادات بعدين", v -> finishSetup());
         go.setContentDescription("ابدأ");
     }
