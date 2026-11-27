@@ -27,6 +27,37 @@ public class DownloadService extends Service {
     /** المصحف كامل لكل القراء. */
     public static final String ACTION_EVERYONE = "com.salah.app.DL_EVERYONE";
     public static final String EXTRA_WIFI_ONLY = "wifi_only";
+    /** قارئ واحد بس (مع ACTION_EVERYONE)، أو من غيره = كل القراء. */
+    public static final String EXTRA_RECITER = "reciter";
+
+    // حالة التحميل الشغال، عشان «إدارة التحميلات» تعرضها لايف
+    private static volatile boolean running;
+    private static volatile String busyReciter;
+    private static volatile String busySura = "";
+    private static volatile int busyDone, busyTotal;
+
+    public static boolean isRunning() {
+        return running;
+    }
+
+    public static String busyReciter() {
+        return running ? busyReciter : null;
+    }
+
+    /** «سورة البقرة · ٤٥ من ٢٨٦ آية» للقارئ اللي بيتحمّل. */
+    public static String busyText() {
+        return busySura + (busyTotal > 0 ? " · " + Ui.arabicDigits(busyDone) + " من "
+                + Ui.arabicDigits(busyTotal) + " آية" : "");
+    }
+
+    public static void startReciter(Context c, String reciter, boolean wifiOnly) {
+        try {
+            c.startForegroundService(new Intent(c, DownloadService.class)
+                    .setAction(ACTION_EVERYONE).putExtra(EXTRA_WIFI_ONLY, wifiOnly)
+                    .putExtra(EXTRA_RECITER, reciter));
+        } catch (RuntimeException ignored) {
+        }
+    }
     public static final String EXTRA_SURA = "sura";
 
     private static final int NOTIF_ID = 6;
@@ -104,12 +135,16 @@ public class DownloadService extends Service {
         final int one = intent == null ? 1 : intent.getIntExtra(EXTRA_SURA, 1);
         final boolean everyone = ACTION_EVERYONE.equals(action);
         final boolean wifiOnly = intent != null && intent.getBooleanExtra(EXTRA_WIFI_ONLY, false);
+        final String onlyReciter = intent == null ? null : intent.getStringExtra(EXTRA_RECITER);
 
+        running = true;
         worker = new Thread(() -> {
             if (everyone) {
                 try {
-                    downloadEveryone(wifiOnly);
+                    downloadEveryone(wifiOnly, onlyReciter);
                 } finally {
+                    running = false;
+                    busyReciter = null;
                     activeSura = 0;
                     stopForeground(true);
                     stopSelf();
@@ -117,6 +152,7 @@ public class DownloadService extends Service {
                 return;
             }
             try {
+                busyReciter = Prefs.reciter(this);
                 Queue<Integer> queue = new ArrayDeque<>();
                 if (all) {
                     for (int i = 1; i <= 114; i++) queue.add(i);
@@ -127,6 +163,8 @@ public class DownloadService extends Service {
                     downloadSura(queue.poll());
                 }
             } finally {
+                running = false;
+                busyReciter = null;
                 activeSura = 0;
                 stopForeground(true);
                 stopSelf();
@@ -137,12 +175,15 @@ public class DownloadService extends Service {
     }
 
     /** كل القراء، سورة سورة. بيقف لو الواي فاي اتقطع (لو «على الواي فاي بس») أو المساحة خلصت. */
-    private void downloadEveryone(boolean wifiOnly) {
+    private void downloadEveryone(boolean wifiOnly, String onlyReciter) {
         String stopReason = null;
-        int n = Reciters.ALL.length;
+        Reciters.Reciter[] list = onlyReciter == null ? Reciters.ALL
+                : new Reciters.Reciter[]{Reciters.byId(onlyReciter)};
+        int n = list.length;
         outer:
         for (int r = 0; r < n; r++) {
-            Reciters.Reciter rec = Reciters.ALL[r];
+            Reciters.Reciter rec = list[r];
+            busyReciter = rec.id;
             for (int s = 1; s <= 114; s++) {
                 if (cancelled.get()) {
                     stopReason = "اتلغى";
@@ -157,15 +198,17 @@ public class DownloadService extends Service {
                     stopReason = "وقف: مساحة الموبايل خلصت";
                     break outer;
                 }
-                downloadSura(rec.id, s, "القارئ " + Ui.arabicDigits(r + 1) + " من "
-                        + Ui.arabicDigits(n) + " · " + rec.name + " · ");
+                downloadSura(rec.id, s, n == 1 ? rec.name + " · " : "القارئ " + Ui.arabicDigits(r + 1)
+                        + " من " + Ui.arabicDigits(n) + " · " + rec.name + " · ");
             }
         }
         Recitation.invalidate();
+        String who = n == 1 ? "بصوت " + list[0].name : "لكل القراء";
         Notifications.show(this, Notifications.CH_UPDATES, 81,
-                stopReason == null ? "اتحمّل المصحف كامل لكل القراء ✓" : "تحميل المصحف لكل القراء — " + stopReason,
-                stopReason == null ? "التلاوة كلها بقت تشتغل من غير نت"
-                        : "ادخل «إدارة التحميلات» ودوس «حمّل المصحف كامل لكل القراء» ويكمّل من مكانه");
+                stopReason == null ? "اتحمّل المصحف كامل " + who + " ✓"
+                        : "تحميل المصحف " + who + " — " + stopReason,
+                stopReason == null ? "التلاوة بقت تشتغل من غير نت"
+                        : "ادخل «إدارة التحميلات» ودوس على القارئ تاني ويكمّل من مكانه");
     }
 
     private void downloadSura(int sura) {
@@ -179,6 +222,9 @@ public class DownloadService extends Service {
         final int total = s.ayas;
         final boolean mine = reciter.equals(Prefs.reciter(this));
         if (mine) activeSura = sura;
+        busySura = "سورة " + s.name;
+        busyDone = 0;
+        busyTotal = total;
 
         if (Downloads.haveCount(this, reciter, sura, total) == total) {
             if (mine) {
@@ -199,6 +245,7 @@ public class DownloadService extends Service {
                 boolean ok = Downloads.fetchAyah(DownloadService.this, reciter, sura, ayah);
                 if (!ok) failed.incrementAndGet();
                 int d = done.incrementAndGet();
+                busyDone = d;
                 if (d % 3 == 0 || d == total) {
                     notify(d, total, prefix + "سورة " + s.name);
                     if (mine) report(sura, d, total);

@@ -128,11 +128,102 @@ public final class Downloads {
         return mb * 1024L * 1024L;
     }
 
+    static long reciterBytes(Reciters.Reciter r) {
+        long mb = r.folder.contains("128") ? 1100 : r.folder.contains("40kbps") ? 350 : 550;
+        return mb * 1024L * 1024L;
+    }
+
+    static long freeSpace(Context c) {
+        File base = Recitation.folder(c).getParentFile();
+        return base != null ? base.getUsableSpace() : 0;
+    }
+
+    /** حالة قارئ على الموبايل: {سور كاملة، سور ناقصة، بايتات}. بيقرا الملفات، فشغّله في خيط جانبي. */
+    static long[] reciterStatus(Context c, String reciter) {
+        java.util.List<Quran.Sura> all = Quran.suras(c);
+        long complete = 0, partial = 0, bytes = 0;
+        File base = Recitation.folderOf(c, reciter);
+        for (Quran.Sura s : all) {
+            File dir = new File(base, String.format(java.util.Locale.US, "%03d", s.index));
+            File[] files = dir.listFiles();
+            int have = 0;
+            if (files != null) {
+                for (File f : files) {
+                    if (f.getName().endsWith(".mp3") && f.length() > 500) {
+                        have++;
+                        bytes += f.length();
+                    }
+                }
+            }
+            if (have >= s.ayas) complete++;
+            else if (have > 0) partial++;
+        }
+        return new long[]{complete, partial, bytes};
+    }
+
+    /** يمسح كل تلاوة قارئ من الموبايل. */
+    static void deleteReciter(Context c, String reciter) {
+        File base = Recitation.folderOf(c, reciter);
+        File[] dirs = base.listFiles();
+        if (dirs != null) {
+            for (File d : dirs) {
+                File[] files = d.listFiles();
+                if (files != null) for (File f : files) f.delete();
+                d.delete();
+            }
+        }
+        Recitation.invalidate();
+    }
+
+    /** تحميل المصحف كامل بصوت قارئ واحد: تأكيد بالحجم والمساحة. */
+    static void askReciter(android.app.Activity a, Reciters.Reciter r, long haveBytes) {
+        long need = Math.max(0, reciterBytes(r) - haveBytes);
+        long free = freeSpace(a);
+        String msg = "هيتحمّل المصحف كامل (١١٤ سورة) بصوت " + r.name + " (" + r.quality + ").\n\n"
+                + "الباقي حوالي " + gb(need) + " جيجا. المحمّل قبل كده مش بيتحمّل تاني، "
+                + "ولو وقف تدوس تاني ويكمّل من مكانه.\n\n"
+                + "المساحة الفاضية: " + gb(free) + " جيجا.";
+        if (free > 0 && free < need + 200L * 1024 * 1024) {
+            msg += "\n\n⚠ المساحة مش كفاية: هيحمّل لحد ما المساحة تخلص.";
+        }
+        new androidx.appcompat.app.AlertDialog.Builder(a)
+                .setTitle("تحميل " + r.name)
+                .setMessage(msg)
+                .setPositiveButton("على الواي فاي بس", (d, w) -> startOne(a, r.id, true))
+                .setNeutralButton("بأي نت", (d, w) -> startOne(a, r.id, false))
+                .setNegativeButton("إلغاء", null)
+                .show();
+    }
+
+    private static void startOne(android.app.Activity a, String reciter, boolean wifiOnly) {
+        if (!checkNet(a, wifiOnly)) return;
+        DownloadService.startReciter(a, reciter, wifiOnly);
+        android.widget.Toast.makeText(a, "بدأ التحميل — الحالة هنا وفي الإشعار",
+                android.widget.Toast.LENGTH_LONG).show();
+    }
+
+    private static boolean checkNet(android.app.Activity a, boolean wifiOnly) {
+        if (DownloadService.isRunning()) {
+            android.widget.Toast.makeText(a, "فيه تحميل شغال دلوقتي: استنى يخلص أو الغيه من الإشعار",
+                    android.widget.Toast.LENGTH_LONG).show();
+            return false;
+        }
+        if (!online(a)) {
+            android.widget.Toast.makeText(a, "محتاج نت", android.widget.Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        if (wifiOnly && !onWifi(a)) {
+            android.widget.Toast.makeText(a, "اتصل بواي فاي الأول، أو اختار «بأي نت»",
+                    android.widget.Toast.LENGTH_LONG).show();
+            return false;
+        }
+        return true;
+    }
+
     /** «حمّل المصحف كامل لكل القراء»: تأكيد بالحجم والمساحة، وبعدين التحميل في الخلفية. */
     static void askEveryone(android.app.Activity a) {
         long need = everyoneBytes();
-        long free = Recitation.folder(a).getParentFile() != null
-                ? Recitation.folder(a).getParentFile().getUsableSpace() : 0;
+        long free = freeSpace(a);
         StringBuilder names = new StringBuilder();
         for (Reciters.Reciter r : Reciters.ALL) {
             if (names.length() > 0) names.append("، ");
@@ -157,21 +248,13 @@ public final class Downloads {
     }
 
     private static void startEveryone(android.app.Activity a, boolean wifiOnly) {
-        if (!online(a)) {
-            android.widget.Toast.makeText(a, "محتاج نت", android.widget.Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (wifiOnly && !onWifi(a)) {
-            android.widget.Toast.makeText(a, "اتصل بواي فاي الأول، أو اختار «بأي نت»",
-                    android.widget.Toast.LENGTH_LONG).show();
-            return;
-        }
+        if (!checkNet(a, wifiOnly)) return;
         DownloadService.startEveryone(a, wifiOnly);
         android.widget.Toast.makeText(a, "بدأ التحميل — تقدر تتابعه من الإشعار",
                 android.widget.Toast.LENGTH_LONG).show();
     }
 
-    private static String gb(long bytes) {
+    static String gb(long bytes) {
         long tenths = Math.round(bytes / (1024.0 * 1024 * 1024) * 10);
         return Ui.arabicDigits(tenths / 10) + (tenths % 10 == 0 ? "" : "٫" + Ui.arabicDigits(tenths % 10));
     }
